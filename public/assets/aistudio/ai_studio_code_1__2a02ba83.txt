@@ -1,0 +1,91 @@
+# `schologic.org` — Product, Architecture & Anti-Scraping Blueprint
+
+**Document Purpose:** Define the technical architecture, database security model, UX/design direction, SEO strategy, and anti-scraping plan for **`schologic.org`**—the public, free-access Kenyan Educational Institutions Index and Student/Instructor portal for the Schologic ecosystem.
+
+---
+
+## 1. Ecosystem Context & Brand Review (`schologic.com` vs. `schologic.org`)
+
+### Findings from Reviewing Schologic's Public Footprint
+A review of Schologic’s live web presence (`schologic.study` and its references to `schologic.com/demo` and `console.schologic.com`) reveals a clear, authoritative institutional identity:
+* **Core Positioning:** *"Credible, flexible, intelligent learning for African universities and colleges."*
+* **Tone & Aesthetic:** Calm, measured, academic, and privacy-conscious (*"A considered path to evaluation"*, *"One system for the work behind learning"*, cookieless/privacy-friendly analytics).
+* **6 Core Platform Capabilities:**
+  1. **Class Manager** — Oversight across courses, classes, and learning activity.
+  2. **AI Assistant** — Practical intelligence embedded in everyday academic work (cutting grading time).
+  3. **AI Detection** — Advisory signals to protect academic integrity.
+  4. **Universal Reader** — Accessible learning materials across formats and needs.
+  5. **OER Library** — Structured open educational resources to remove textbook cost.
+  6. **Practicum Manager** — Coordinating placements, supervision, and evidence across programmes (especially high-value for Kenyan TVETs, teacher training colleges, and medical/nursing colleges).
+* **Current `schologic.com` Friction (Intentional for B2B):** The evaluation flow at `schologic.com/demo` is explicitly *"not instant access or a sandbox"*—it is a vetted, manually provisioned process targeting institutional decision-makers and administrators.
+* **SEO Observation:** `schologic.com` currently shows no indexed pages in Google search (likely due to active development, `noindex`, or edge rules), meaning **`schologic.org` will act as the primary organic discovery engine** for the entire Schologic brand in Kenya.
+
+### Strategic Separation of Domains
+To avoid confusing institutional buyers with students/instructors, each domain has one crisp job:
+
+| Domain | Primary Audience | Core Purpose | Hosting / Origin |
+| :--- | :--- | :--- | :--- |
+| **`schologic.com`** | Institutional Buyers (VCs, Principals, Registrars, ICT Directors) | B2B SaaS marketing, pricing plans, institutional procurement, manual demo applications (`/demo`). | Marketing Site |
+| **`console.schologic.com`** | Institution Administrators | Tenant management, seats, roles, billing, and internal operations. | Admin App |
+| **`demo.schologic.study`** | Institutional Evaluators | Live manually-provisioned demo tenant showcasing custom-domain capabilities. | Multi-Tenant LMS |
+| **`schologic.org`** *(This Project)* | **Students, Instructors & General Public** | **Instant, free-access Kenyan Institutions Index (2,000+ schools), AI Discovery Chat, Campus Login Router, and Free-Tier onboarding.** | **Astro on Cloudflare Workers + Hyperdrive** |
+| **`*.schologic.org`** | Free-Tier Campuses (Students & Instructors) | Live free-tier LMS portals (e.g., `kmtc.schologic.org`). | Multi-Tenant LMS |
+| **Custom Domains** | Paid Institutional Customers | White-labeled LMS tenants via Cloudflare for SaaS (e.g., `lms.college.ac.ke`). | Multi-Tenant LMS |
+
+### What Should Move from `schologic.com` to `schologic.org`
+Keep institutional governance, compliance, custom domains, and procurement on `schologic.com`. Move/adapt the **bottom-up, practitioner-facing** stories onto lightweight pages on `schologic.org`:
+* **For Students:** Finding verified Kenyan institutions, exploring courses, accessing free **OER Library** textbooks, and using the **Universal Reader** inside their campus portal.
+* **For Instructors:** Free-tier access to **Class Manager**, **AI Assistant** (cutting grading time), **AI Detection**, and **Practicum Manager** on a free `yourcampus.schologic.org` subdomain.
+
+---
+
+## 2. Infrastructure & Tech Stack Rationale
+
+### Selected Stack
+* **Framework:** **Astro (v6/v7)** using `@astrojs/cloudflare` (deployed to **Cloudflare Workers with Static Assets**, not legacy Cloudflare Pages).
+* **Interactive Islands:** React (`@astrojs/react`) strictly for interactive widgets (47-County Map Explorer, Filter Bar, AI Chat Drawer)—zero JavaScript shipped on static/SEO sections.
+* **Database (Production):** **Neon (Serverless Postgres)** with `pgvector` and `pg_trgm` extensions.
+* **Database (Backup):** **Railway (Self-Hosted Postgres)** retained as the off-cloud VPS backup point and research pipeline store.
+* **Connection Pooling & Edge Caching:** **Cloudflare Hyperdrive** bound directly to the Astro Worker.
+* **Session State & Anti-Scraping Budgets:** **Cloudflare Workers KV** (via native `Astro.session`) + **Cloudflare Turnstile** (Invisible mode).
+* **Media Storage:** **Cloudflare R2** for institution logos (`logo_url`) to avoid external hotlinking or database egress fees.
+* **AI Layer (Phase 2):** **Cloudflare AI Gateway** (for free caching & rate control) + LLM API + Neon `pgvector`.
+
+### Why Astro + Cloudflare Workers + Hyperdrive (Over Next.js)?
+1. **Eliminates Next.js Serverless Cost Bloat:** Next.js App Router on Cloudflare (via OpenNext) bundles heavy React Server Component runtimes, consumes high Worker CPU milliseconds, and triggers background `?_rsc` link-prefetch storms (turning 1 page visit into 15+ paid requests). Astro compiles SSR routes to lightweight HTML string concatenation (~1–3ms CPU time) with zero hidden prefetch storms.
+2. **No Hydration Prop Leaks:** Next.js easily leaks full database objects into `<script>self.__next_f.push(...)</script>` payloads when passing props to Client Components. Astro outputs pure semantic HTML unless an island explicitly requests client state.
+3. **Hyperdrive + Neon Synergy:** Hyperdrive maintains persistent regional pools next to Neon and **caches read-only `SELECT` queries at Cloudflare's edge**. Because ~2,000 institutions is a compact dataset, Hyperdrive absorbs repeat traffic and bot bursts without constantly waking Neon's serverless compute or multiplying query costs.
+4. **Predictable Cost Floor:** Fits cleanly within Cloudflare’s **$5/month Workers Paid plan** (10M requests, 30M CPU ms, Hyperdrive included).
+
+---
+
+## 3. Database Security, Schema Hygiene & Neon + Hyperdrive Setup
+
+### Audit of the `institutions` Schema
+Your `institutions` table contains ~70 columns, over half of which are **internal research/ETL pipeline metadata** (`research_data`, `validation`, `sources`, `research_score`, `conflict`, `claimed_by`, `attempt_count`, `last_error`, `changelog_jsonb`, `prefetch_error`, etc.) or **sensitive personal PII** (`personal_contacts`).
+
+**Critical Security Rule:** `schologic.org` must **never** query the raw `institutions` table directly. Exposing `personal_contacts` poses both a prime scraping risk and a **Kenya Data Protection Act (2019)** compliance risk.
+
+### Step 1: Schema Additions & Indexes in Neon
+Run the following preparation in Neon before connecting `schologic.org`:
+
+```sql
+-- 1. Enable required extensions
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- 2. Add SEO slug and generated full-text search vector
+ALTER TABLE institutions
+  ADD COLUMN IF NOT EXISTS slug text UNIQUE,
+  ADD COLUMN IF NOT EXISTS portal_subdomain text UNIQUE, -- links to active *.schologic.org or custom domain
+  ADD COLUMN IF NOT EXISTS search_tsv tsvector GENERATED ALWAYS AS (
+    setweight(to_tsvector('english', coalesce(name, '')), 'A') ||
+    setweight(to_tsvector('english', coalesce(town, '') || ' ' || coalesce(county, '') || ' ' || coalesce(region, '')), 'B') ||
+    setweight(to_tsvector('english', coalesce(type, '') || ' ' || coalesce(category, '') || ' ' || coalesce(about, '')), 'C')
+  ) STORED;
+
+-- 3. Search & filter indexes (instant sub-15ms queries across 2,000 rows without Algolia/Typesense)
+CREATE INDEX IF NOT EXISTS idx_inst_name_trgm ON institutions USING gin (name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_inst_search_tsv ON institutions USING gin (search_tsv);
+CREATE INDEX IF NOT EXISTS idx_inst_county_type ON institutions (county, type, ownership)
+  WHERE duplicate_of IS NULL AND operational_status = 'active';

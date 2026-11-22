@@ -1,0 +1,45 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import OerReaderShowcase from '../components/OerReaderShowcase';
+---
+
+<BaseLayout
+  title="OER Library & Universal Reader | schologic.org"
+  description="Zero-cost Open Educational Resources aligned to Kenyan university, TVET CBET, teacher training, and KMTC allied health syllabi inside the Universal Reader."
+  activeNav="oer"
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+    <header class="border-b border-hairline pb-6 flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+      <div>
+        <p class="font-mono text-[11px] uppercase tracking-widest text-forest font-semibold">
+          For Students &amp; Lecturers · Zero Textbook Cost
+        </p>
+        <h1 class="font-serif text-3xl sm:text-4xl font-semibold text-ink mt-1.5 text-balance">
+          OER Library &amp; Universal Reader
+        </h1>
+        <p class="mt-2 text-sm sm:text-base text-muted max-w-2xl leading-relaxed">
+          Structured, openly licensed textbooks and practicum manuals curated for Kenyan
+          universities, TVETs, and KMTC campuses—delivered inside an accessible reader built for
+          low-bandwidth mobile and campus lab screens.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap gap-3 shrink-0">
+        <a
+          href="/login"
+          class="px-4 py-2.5 bg-forest text-paper text-xs font-semibold hover:bg-ink transition-colors whitespace-nowrap"
+        >
+          Sign In
+        </a>
+        <a
+          href="/start"
+          class="px-4 py-2.5 border border-hairline bg-limestone/50 text-ink text-xs font-semibold hover:border-ink transition-colors whitespace-nowrap"
+        >
+          Adopt for Your Course →
+        </a>
+      </div>
+    </header>
+
+    <OerReaderShowcase client:load />
+  </div>
+</BaseLayout>

@@ -1,0 +1,132 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getIndexedCounties } from '../../data/publicInstitutions';
+import { formatCategoryLabel, formatTypeLabel } from '../../types/institution';
+
+export function getStaticPaths() {
+  return getIndexedCounties().map((entry) => ({
+    params: { county: entry.countySlug },
+    props: { countyEntry: entry },
+  }));
+}
+
+const { countyEntry } = Astro.props;
+const compareIds = countyEntry.institutions
+  .slice(0, 4)
+  .map((i) => i.slug)
+  .join(',');
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: `Accredited Institutions in ${countyEntry.county} County, Kenya`,
+  description: `Indexed universities, TVETs, and KMTC campuses located in ${countyEntry.county} County (${countyEntry.region} Region).`,
+};
+---
+
+<BaseLayout
+  title={`${countyEntry.county} County Academic Institutions | schologic.org`}
+  description={`Browse ${countyEntry.institutions.length} verified universities, TVETs, and KMTC campuses in ${countyEntry.county} County, Kenya.`}
+  activeNav="counties"
+>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  </Fragment>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+    <nav aria-label="Breadcrumb" class="font-mono text-xs text-muted flex items-center gap-2">
+      <a href="/" class="hover:text-forest hover:underline">Directory</a>
+      <span>/</span>
+      <a href="/counties" class="hover:text-forest hover:underline">47-County Ledger</a>
+      <span>/</span>
+      <span class="text-ink font-medium">{countyEntry.county} County</span>
+    </nav>
+
+    <header class="border-b border-hairline pb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div>
+        <p class="font-mono text-[11px] uppercase tracking-widest text-forest font-semibold">
+          {countyEntry.region} Region · County Dossier
+        </p>
+        <h1 class="font-serif text-3xl sm:text-4xl font-semibold text-ink mt-1.5">
+          {countyEntry.county} County Institutions
+        </h1>
+        <p class="mt-2 text-sm sm:text-base text-muted">
+          <span class="font-mono font-semibold text-ink tabular-nums">
+            {countyEntry.institutions.length}
+          </span>{' '}
+          verified institutions · Estimated{' '}
+          <span class="font-mono font-semibold text-ink tabular-nums">
+            {countyEntry.totalEnrollment.toLocaleString()}
+          </span>{' '}
+          students enrolled.
+        </p>
+      </div>
+
+      {countyEntry.institutions.length > 1 && (
+        <a
+          href={`/compare?ids=${encodeURIComponent(compareIds)}`}
+          class="px-4 py-2.5 bg-forest text-paper text-xs font-semibold hover:bg-ink transition-colors whitespace-nowrap self-start md:self-auto"
+        >
+          Compare {countyEntry.county} Institutions →
+        </a>
+      )}
+    </header>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {countyEntry.institutions.map((inst) => (
+        <article class="border border-hairline bg-paper p-6 flex flex-col justify-between gap-4">
+          <div>
+            <div class="font-mono text-[11px] text-muted flex items-center gap-2">
+              <span class="text-forest font-semibold uppercase">{formatTypeLabel(inst.type)}</span>
+              <span>·</span>
+              <span class="capitalize">{inst.ownership}</span>
+              <span>·</span>
+              <span>{inst.town}</span>
+            </div>
+
+            <h2 class="font-serif text-2xl font-semibold text-ink mt-1.5">
+              <a href={`/institutions/${inst.slug}`} class="hover:text-forest hover:underline">
+                {inst.name}
+              </a>
+            </h2>
+
+            <p class="mt-2 text-sm text-muted leading-relaxed">{inst.description}</p>
+
+            <dl class="mt-4 pt-3 border-t border-hairline grid grid-cols-3 gap-3 text-xs">
+              <div>
+                <dt class="text-muted">Classification</dt>
+                <dd class="font-medium text-ink mt-0.5 truncate">
+                  {inst.category ?? formatCategoryLabel(inst.category)}
+                </dd>
+              </div>
+              <div>
+                <dt class="text-muted">Students</dt>
+                <dd class="font-mono font-semibold text-ink tabular-nums mt-0.5">
+                  ~{inst.estimated_student_count.toLocaleString()}
+                </dd>
+              </div>
+              <div>
+                <dt class="text-muted">Courses</dt>
+                <dd class="font-mono font-semibold text-ink tabular-nums mt-0.5">
+                  {inst.courses.length} tracked
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="pt-3 border-t border-hairline flex items-center justify-between text-xs">
+            <span class="font-mono text-muted">
+              {inst.portal_subdomain ?? inst.custom_portal_domain ?? 'Unclaimed Portal'}
+            </span>
+            <a
+              href={`/institutions/${inst.slug}`}
+              class="font-semibold text-forest hover:underline"
+            >
+              Read Full Monograph →
+            </a>
+          </div>
+        </article>
+      ))}
+    </div>
+  </div>
+</BaseLayout>

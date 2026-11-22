@@ -1,0 +1,267 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="For Students & Educators — 6 Core Capabilities & Ecosystem | schologic.org"
+  description="Explore Schologic's 6 core academic capabilities (Class Manager, AI Assistant, AI Detection, Universal Reader, OER Library, Practicum Manager) and domain architecture."
+  activeNav="educators"
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12 space-y-12">
+    <!-- Hero -->
+    <header class="border-b border-hairline pb-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
+      <div class="lg:col-span-8">
+        <p class="font-mono text-[11px] uppercase tracking-widest text-forest font-semibold">
+          One System for the Work Behind Learning
+        </p>
+        <h1 class="font-serif text-3xl sm:text-5xl font-semibold text-ink mt-2 leading-tight text-balance">
+          Credible, flexible, intelligent learning for Kenyan students and educators.
+        </h1>
+        <p class="mt-4 text-base sm:text-lg text-muted leading-relaxed max-w-2xl">
+          While <span class="font-mono text-ink">schologic.com</span> provides a considered path to
+          institutional evaluation, <span class="font-mono text-ink">schologic.org</span> gives
+          students and individual lecturers immediate, privacy-first access to course materials,
+          practicum supervision, and free <code class="font-mono text-ink">*.schologic.org</code>{' '}
+          campuses.
+        </p>
+      </div>
+
+      <div class="lg:col-span-4 flex flex-wrap lg:justify-end gap-3">
+        <a
+          href="/start"
+          class="px-4 py-2.5 bg-forest text-paper text-sm font-semibold hover:bg-ink transition-colors whitespace-nowrap"
+        >
+          Free-Tier Campus Setup
+        </a>
+        <a
+          href="/oer"
+          class="px-4 py-2.5 border border-ink bg-paper text-ink text-sm font-semibold hover:bg-ink hover:text-paper transition-colors whitespace-nowrap"
+        >
+          Preview OER &amp; Reader
+        </a>
+      </div>
+    </header>
+
+    <!-- Section 1: For Students -->
+    <section class="space-y-5">
+      <div class="border-b border-hairline pb-3 flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+        <div>
+          <p class="font-mono text-[11px] uppercase tracking-widest text-lapis font-semibold">
+            01 · For Students
+          </p>
+          <h2 class="font-serif text-2xl sm:text-3xl font-semibold text-ink mt-1">
+            Discover accredited programmes &amp; study without textbook fees
+          </h2>
+        </div>
+        <a href="/oer" class="text-xs font-semibold text-forest hover:underline">
+          Open Interactive OER Reader →
+        </a>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <article class="border border-hairline bg-paper p-6 space-y-3">
+          <div class="font-mono text-xs text-forest uppercase tracking-wider">
+            Zero-Cost Course Materials
+          </div>
+          <h3 class="font-serif text-2xl font-semibold text-ink">OER Library</h3>
+          <p class="text-sm text-muted leading-relaxed">
+            Structured Open Educational Resources aligned to Kenyan university, TVET CBET, and
+            KMTC allied health syllabi—removing imported textbook costs from day one.
+          </p>
+          <ul class="pt-2 border-t border-hairline space-y-1.5 text-xs text-ink/85">
+            <li>· Curated across Engineering, Nursing/Clinical Medicine, Education &amp; Computing</li>
+            <li>· Lightweight chapter views suited for mobile data and campus computer labs</li>
+          </ul>
+        </article>
+
+        <article class="border border-hairline bg-paper p-6 space-y-3">
+          <div class="font-mono text-xs text-lapis uppercase tracking-wider">
+            Accessible Reading Environment
+          </div>
+          <h3 class="font-serif text-2xl font-semibold text-ink">Universal Reader</h3>
+          <p class="text-sm text-muted leading-relaxed">
+            Accessible learning materials across formats and needs, offering typography scaling,
+            high-contrast reading modes, and structured syllabus checkpoints.
+          </p>
+          <ul class="pt-2 border-t border-hairline space-y-1.5 text-xs text-ink/85">
+            <li>· Consistent reading surface across shared lab PCs and smartphones</li>
+            <li>· Zero-tracking, cookieless study sessions</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <!-- Section 2: For Instructors & Practicum Coordinators -->
+    <section class="space-y-5">
+      <div class="border-b border-hairline pb-3 flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+        <div>
+          <p class="font-mono text-[11px] uppercase tracking-widest text-forest font-semibold">
+            02 · For Instructors &amp; Supervisors
+          </p>
+          <h2 class="font-serif text-2xl sm:text-3xl font-semibold text-ink mt-1">
+            Practical tools for everyday teaching &amp; Kenyan field practicums
+          </h2>
+        </div>
+        <a href="/start" class="text-xs font-semibold text-forest hover:underline">
+          Claim yourcampus.schologic.org →
+        </a>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <article class="border border-hairline bg-paper p-6 space-y-3">
+          <div class="font-mono text-xs text-muted uppercase tracking-wider">
+            Course Operations
+          </div>
+          <h3 class="font-serif text-xl font-semibold text-ink">Class Manager</h3>
+          <p class="text-sm text-muted leading-relaxed">
+            Oversight across courses, classes, and learning activity—keeping unit schedules,
+            submissions, and cohort progress clear without bloated enterprise menus.
+          </p>
+        </article>
+
+        <article class="border border-hairline bg-paper p-6 space-y-3">
+          <div class="font-mono text-xs text-muted uppercase tracking-wider">
+            Grading &amp; Workflow Speed
+          </div>
+          <h3 class="font-serif text-xl font-semibold text-ink">AI Assistant</h3>
+          <p class="text-sm text-muted leading-relaxed">
+            Practical intelligence embedded in everyday academic work—cutting grading turnaround on
+            large cohorts while leaving every final mark and comment in instructor hands.
+          </p>
+        </article>
+
+        <article class="border border-hairline bg-paper p-6 space-y-3">
+          <div class="font-mono text-xs text-muted uppercase tracking-wider">
+            Academic Integrity
+          </div>
+          <h3 class="font-serif text-xl font-semibold text-ink">AI Detection</h3>
+          <p class="text-sm text-muted leading-relaxed">
+            Advisory signals to protect academic integrity—supporting transparent instructor review
+            and revision guidance rather than opaque automated penalties.
+          </p>
+        </article>
+
+        <article class="border border-hairline bg-paper p-6 space-y-3">
+          <div class="font-mono text-xs text-terracotta uppercase tracking-wider">
+            Kenyan TVETs, TTCs &amp; KMTC Focus
+          </div>
+          <h3 class="font-serif text-xl font-semibold text-ink">Practicum Manager</h3>
+          <p class="text-sm text-muted leading-relaxed">
+            Coordinate placements, supervision, and verified evidence across industrial
+            attachments, teacher training teaching practice, and hospital clinical rotations.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <!-- Section 3: Strategic Separation of Domains -->
+    <section class="border border-hairline bg-paper overflow-x-auto">
+      <div class="p-6 border-b border-hairline">
+        <p class="font-mono text-[11px] uppercase tracking-widest text-muted">
+          Ecosystem Architecture
+        </p>
+        <h2 class="font-serif text-2xl font-semibold text-ink mt-0.5">
+          Strategic Separation Across Schologic Domains
+        </h2>
+      </div>
+
+      <table class="w-full text-left border-collapse text-xs sm:text-sm">
+        <thead>
+          <tr class="border-b border-hairline bg-limestone/50 font-mono text-[11px] uppercase tracking-wider text-muted">
+            <th class="py-3 px-4">Domain</th>
+            <th class="py-3 px-4">Primary Audience</th>
+            <th class="py-3 px-4">Purpose</th>
+            <th class="py-3 px-4">Access</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-hairline">
+          <tr class="bg-forest/[0.03]">
+            <td class="py-3.5 px-4 font-mono font-semibold text-forest whitespace-nowrap">
+              schologic.org
+            </td>
+            <td class="py-3.5 px-4 font-medium text-ink">Students, Instructors &amp; Public</td>
+            <td class="py-3.5 px-4 text-muted">
+              Kenyan Institutions Index (2,000+ target), AI Discovery Chat, Campus Router &amp; Free-Tier Onboarding
+            </td>
+            <td class="py-3.5 px-4 whitespace-nowrap">
+              <a href="/" class="text-forest font-semibold hover:underline">You are here</a>
+            </td>
+          </tr>
+          <tr>
+            <td class="py-3.5 px-4 font-mono text-ink whitespace-nowrap">*.schologic.org</td>
+            <td class="py-3.5 px-4 font-medium text-ink">Free-Tier Campuses</td>
+            <td class="py-3.5 px-4 text-muted">
+              Live free-tier LMS portals (e.g. <code class="font-mono">kmtc.schologic.org</code>)
+            </td>
+            <td class="py-3.5 px-4 whitespace-nowrap">
+              <a href="/login" class="text-lapis font-semibold hover:underline">Login Gateway →</a>
+            </td>
+          </tr>
+          <tr>
+            <td class="py-3.5 px-4 font-mono text-ink whitespace-nowrap">schologic.com</td>
+            <td class="py-3.5 px-4 font-medium text-ink">
+              Institutional Buyers (VCs, Principals, Registrars)
+            </td>
+            <td class="py-3.5 px-4 text-muted">
+              Enterprise procurement, governance, pricing &amp; vetted evaluation (<code class="font-mono">/demo</code>)
+            </td>
+            <td class="py-3.5 px-4 whitespace-nowrap">
+              <a
+                href="https://schologic.com/demo"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-lapis hover:underline"
+              >
+                schologic.com/demo ↗
+              </a>
+            </td>
+          </tr>
+          <tr>
+            <td class="py-3.5 px-4 font-mono text-ink whitespace-nowrap">demo.schologic.study</td>
+            <td class="py-3.5 px-4 font-medium text-ink">Institutional Evaluators</td>
+            <td class="py-3.5 px-4 text-muted">
+              Live manually-provisioned demo tenant showcasing custom-domain LMS workflows
+            </td>
+            <td class="py-3.5 px-4 whitespace-nowrap">
+              <a
+                href="https://demo.schologic.study"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-lapis hover:underline"
+              >
+                demo.schologic.study ↗
+              </a>
+            </td>
+          </tr>
+          <tr>
+            <td class="py-3.5 px-4 font-mono text-ink whitespace-nowrap">console.schologic.com</td>
+            <td class="py-3.5 px-4 font-medium text-ink">Institution Administrators</td>
+            <td class="py-3.5 px-4 text-muted">
+              Tenant seats, roles, custom domains &amp; institutional operations
+            </td>
+            <td class="py-3.5 px-4 whitespace-nowrap">
+              <a
+                href="https://console.schologic.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-lapis hover:underline"
+              >
+                console.schologic.com ↗
+              </a>
+            </td>
+          </tr>
+          <tr>
+            <td class="py-3.5 px-4 font-mono text-ink whitespace-nowrap">Custom Domains</td>
+            <td class="py-3.5 px-4 font-medium text-ink">Paid Institutional Customers</td>
+            <td class="py-3.5 px-4 text-muted">
+              White-labeled LMS tenants (e.g. <code class="font-mono">lms.usiu.ac.ke</code>)
+            </td>
+            <td class="py-3.5 px-4 whitespace-nowrap text-muted font-mono text-xs">
+              Via schologic.com
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </div>
+</BaseLayout>

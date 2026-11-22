@@ -1,0 +1,284 @@
+---
+import '../index.css';
+import AIChatDrawer from '../components/AIChatDrawer';
+import { PUBLIC_INSTITUTIONS } from '../data/publicInstitutions';
+
+export interface Props {
+  title: string;
+  description?: string;
+  activeNav?: 'directory' | 'compare' | 'counties' | 'educators' | 'contact' | 'login' | 'oer' | 'start';
+}
+
+const {
+  title,
+  description = 'Credible, flexible, intelligent learning for African universities and colleges. Public Kenyan Educational Institutions Index, Interactive County Map, and Comparison Studio on schologic.org.',
+  activeNav = 'directory',
+} = Astro.props;
+
+const navLinks = [
+  { id: 'directory', label: 'Directory', href: '/' },
+  { id: 'compare', label: 'Compare', href: '/compare' },
+  { id: 'counties', label: 'Counties', href: '/counties' },
+  { id: 'educators', label: 'Educators', href: '/for-educators' },
+  { id: 'contact', label: 'Contact', href: '/contact' },
+] as const;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="shortcut icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <slot name="head" />
+  </head>
+  <body class="min-h-screen bg-paper text-ink antialiased flex flex-col selection:bg-forest/15 selection:text-forest">
+    <header class="sticky top-0 z-40 bg-paper/95 backdrop-blur-sm border-b border-hairline">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-6">
+        <!-- Zone 1: Brand Lockup with Official Schologic Logo -->
+        <a
+          href="/"
+          class="flex items-center gap-2.5 whitespace-nowrap shrink-0 group focus:outline-none"
+        >
+          <img
+            src="/images/schologic-logo.png"
+            alt="Schologic Logo"
+            width="36"
+            height="36"
+            class="w-9 h-9 object-contain shrink-0"
+          />
+          <span class="font-serif text-xl sm:text-2xl font-semibold tracking-tight text-ink group-hover:text-forest transition-colors">
+            schologic.org
+          </span>
+          <span class="hidden lg:inline font-mono text-[11px] uppercase tracking-widest text-muted border-l border-hairline pl-2.5">
+            Kenya Index
+          </span>
+        </a>
+
+        <!-- Zone 2: Primary Navigation -->
+        <nav aria-label="Primary" class="hidden md:flex items-center gap-6">
+          {navLinks.map((link) => {
+            const isActive = activeNav === link.id;
+            return (
+              <a
+                href={link.href}
+                aria-current={isActive ? 'page' : undefined}
+                class:list={[
+                  'text-sm font-medium whitespace-nowrap shrink-0 py-1 border-b-2 transition-colors',
+                  isActive
+                    ? 'text-forest border-forest'
+                    : 'text-muted border-transparent hover:text-ink hover:border-hairline',
+                ]}
+              >
+                {link.label}
+              </a>
+            );
+          })}
+        </nav>
+
+        <!-- Zone 3: Login CTA + Mobile Toggle -->
+        <div class="flex items-center gap-3 shrink-0">
+          <a
+            href="/login"
+            class:list={[
+              'inline-flex items-center justify-center px-4 py-2 text-xs sm:text-sm font-semibold whitespace-nowrap shrink-0 border transition-colors',
+              activeNav === 'login'
+                ? 'bg-forest text-paper border-forest'
+                : 'bg-ink text-paper border-ink hover:bg-forest hover:border-forest',
+            ]}
+          >
+            Login
+          </a>
+
+          <button
+            type="button"
+            id="mobile-menu-toggle"
+            aria-expanded="false"
+            aria-controls="mobile-nav-panel"
+            class="md:hidden inline-flex items-center justify-center w-9 h-9 border border-hairline bg-limestone/60 text-ink hover:border-ink/40 transition-colors"
+            aria-label="Toggle navigation menu"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 6h16M4 12h16M4 18h16" stroke-linecap="round" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile Nav Panel -->
+      <div id="mobile-nav-panel" class="hidden md:hidden border-t border-hairline bg-paper px-4 py-3">
+        <nav aria-label="Mobile" class="flex flex-col gap-2">
+          {navLinks.map((link) => {
+            const isActive = activeNav === link.id;
+            return (
+              <a
+                href={link.href}
+                aria-current={isActive ? 'page' : undefined}
+                class:list={[
+                  'px-2 py-2 text-sm font-medium border-b border-hairline/60 last:border-b-0',
+                  isActive ? 'text-forest font-semibold' : 'text-ink',
+                ]}
+              >
+                {link.label}
+              </a>
+            );
+          })}
+          <a href="/oer" class="px-2 py-2 text-sm font-medium text-ink border-b border-hairline/60">
+            OER Library &amp; Reader
+          </a>
+          <a href="/start" class="px-2 py-2 text-sm font-medium text-forest font-semibold">
+            Free-Tier Campus Setup
+          </a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="flex-1">
+      <slot />
+    </main>
+
+    <footer class="border-t border-hairline bg-limestone/50 mt-16">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-8 pb-10 border-b border-hairline">
+          <div class="md:col-span-5">
+            <div class="flex items-center gap-2.5">
+              <img
+                src="/images/schologic-logo.png"
+                alt="Schologic"
+                width="24"
+                height="24"
+                class="w-6 h-6 object-contain"
+              />
+              <span class="font-serif text-xl font-semibold text-ink">schologic.org</span>
+              <span class="font-mono text-[11px] uppercase tracking-widest text-muted">
+                Kenya Academic Index
+              </span>
+            </div>
+            <p class="mt-3 text-sm text-muted leading-relaxed max-w-md">
+              Credible, flexible, intelligent learning for African universities and colleges. One
+              system for the work behind learning—open Kenyan institution discovery, OER
+              textbooks, and practitioner workspaces.
+            </p>
+            <p class="mt-3 font-mono text-[11px] text-muted">
+              Cookieless Analytics · Zero Personal PII · Kenya Data Protection Act (2019)
+            </p>
+          </div>
+
+          <div class="md:col-span-3">
+            <h3 class="font-mono text-[11px] uppercase tracking-widest text-muted mb-3">
+              Public Index &amp; Tools
+            </h3>
+            <ul class="space-y-2 text-sm">
+              <li>
+                <a href="/" class="text-ink hover:text-forest transition-colors">
+                  Kenyan Institutions Index
+                </a>
+              </li>
+              <li>
+                <a href="/compare" class="text-ink hover:text-forest transition-colors">
+                  Side-by-Side Comparison Studio
+                </a>
+              </li>
+              <li>
+                <a href="/counties" class="text-ink hover:text-forest transition-colors">
+                  47-County Geographic Map
+                </a>
+              </li>
+              <li>
+                <a href="/oer" class="text-ink hover:text-forest transition-colors">
+                  OER Library &amp; Universal Reader
+                </a>
+              </li>
+              <li>
+                <a href="/contact" class="text-ink hover:text-forest transition-colors">
+                  Contact &amp; Registry Updates
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <div class="md:col-span-4">
+            <h3 class="font-mono text-[11px] uppercase tracking-widest text-muted mb-3">
+              Access &amp; Ecosystem
+            </h3>
+            <ul class="space-y-2 text-sm">
+              <li>
+                <a href="/login" class="text-ink font-semibold hover:text-forest transition-colors">
+                  Sign In / Account Login
+                </a>
+              </li>
+              <li>
+                <a href="/start" class="text-ink hover:text-forest transition-colors">
+                  Free-Tier Instructor Onboarding
+                </a>
+              </li>
+              <li>
+                <a href="/for-educators" class="text-ink hover:text-forest transition-colors">
+                  For Students &amp; Educators
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://schologic.com/demo"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-ink hover:text-forest transition-colors"
+                >
+                  Institutional Evaluation (schologic.com/demo)
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://demo.schologic.study"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-ink hover:text-forest transition-colors"
+                >
+                  Live Evaluator Sandbox (demo.schologic.study)
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="pt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-muted">
+          <p>
+            © {new Date().getFullYear()} Schologic. Synthesized from CUE, TVETA, and Ministry of
+            Health public registries.
+          </p>
+          <p class="font-mono">
+            schologic.org · Nairobi, Kenya
+          </p>
+        </div>
+      </div>
+    </footer>
+
+    <AIChatDrawer institutions={PUBLIC_INSTITUTIONS} client:load />
+
+    <script is:inline>
+      const toggleBtn = document.getElementById('mobile-menu-toggle');
+      const mobilePanel = document.getElementById('mobile-nav-panel');
+      if (toggleBtn && mobilePanel) {
+        toggleBtn.addEventListener('click', () => {
+          const isOpen = !mobilePanel.classList.contains('hidden');
+          mobilePanel.classList.toggle('hidden', isOpen);
+          toggleBtn.setAttribute('aria-expanded', String(!isOpen));
+        });
+      }
+    </script>
+  </body>
+</html>

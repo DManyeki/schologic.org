@@ -1,0 +1,293 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import KenyaInteractiveMap from '../components/KenyaInteractiveMap';
+import DirectoryExplorer from '../components/DirectoryExplorer';
+import {
+  KENYA_47_COUNTIES,
+  PUBLIC_INSTITUTIONS,
+  getIndexedCounties,
+} from '../data/publicInstitutions';
+
+const totalInstitutions = PUBLIC_INSTITUTIONS.length;
+const totalEnrollment = PUBLIC_INSTITUTIONS.reduce((s, i) => s + i.estimated_student_count, 0);
+const totalCourses = PUBLIC_INSTITUTIONS.reduce((s, i) => s + i.courses.length, 0);
+const indexedCountiesCount = getIndexedCounties().length;
+
+const countyRegions: Record<string, string> = {};
+for (const c of KENYA_47_COUNTIES) {
+  countyRegions[c.county] = c.region;
+}
+
+// 3 contrasting featured monographs across University, TVET NP, and KMTC
+const featuredInstitutions = [
+  PUBLIC_INSTITUTIONS.find((i) => i.slug === 'university-of-nairobi'),
+  PUBLIC_INSTITUTIONS.find((i) => i.slug === 'the-nairobi-national-polytechnic'),
+  PUBLIC_INSTITUTIONS.find((i) => i.slug === 'kmtc-nairobi-main'),
+].filter((i): i is (typeof PUBLIC_INSTITUTIONS)[number] => Boolean(i));
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'schologic.org — Kenyan Educational Institutions Index',
+  url: 'https://schologic.org',
+  description:
+    'Credible, flexible, intelligent learning for African universities and colleges. Public Kenyan academic institutions index with interactive 47-county map and side-by-side radar comparison.',
+};
+---
+
+<BaseLayout
+  title="schologic.org — Kenyan Academic Institutions Index & Interactive Map"
+  description="Explore Kenyan universities, TVETs, National Polytechnics, and KMTC campuses on an interactive 47-county geographic map, compare capabilities side-by-side, and access free OER tools."
+  activeNav="directory"
+>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  </Fragment>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-12">
+    <!-- Compelling Split Editorial Masthead -->
+    <section class="border-b border-hairline pb-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+      <div class="lg:col-span-7 space-y-5">
+        <p class="font-mono text-[11px] uppercase tracking-widest text-forest font-semibold">
+          schologic.org · Kenya Higher &amp; Technical Education Registry
+        </p>
+
+        <h1 class="font-serif text-4xl sm:text-5xl font-semibold tracking-tight text-ink text-balance leading-[1.08]">
+          Credible, flexible, intelligent discovery across Kenyan institutions.
+        </h1>
+
+        <p class="text-base sm:text-lg text-muted leading-relaxed max-w-2xl">
+          One system for the work behind learning. Navigate verified Kenyan universities, National
+          Polytechnics, TVET colleges, and KMTC campuses geographically, compare academic profiles
+          side-by-side, or explore zero-cost OER textbooks.
+        </p>
+
+        <div class="flex flex-wrap items-center gap-3 pt-1">
+          <a
+            href="#kenya-map"
+            class="px-4 py-2.5 bg-forest text-paper text-sm font-semibold hover:bg-ink transition-colors whitespace-nowrap"
+          >
+            Explore Interactive Map
+          </a>
+          <button
+            type="button"
+            id="hero-open-discovery"
+            class="px-4 py-2.5 border border-ink bg-paper text-ink text-sm font-semibold hover:bg-ink hover:text-paper transition-colors whitespace-nowrap cursor-pointer"
+          >
+            Ask Discovery Assistant
+          </button>
+          <a
+            href="/compare"
+            class="px-4 py-2.5 border border-hairline bg-limestone/50 text-ink text-sm font-semibold hover:border-ink transition-colors whitespace-nowrap"
+          >
+            Compare Studio
+          </a>
+        </div>
+      </div>
+
+      <!-- Right: Structured Registry Almanac Panel (4 concise metrics + key links) -->
+      <div class="lg:col-span-5 border border-hairline bg-paper p-5 sm:p-6 space-y-5">
+        <div class="flex items-center justify-between pb-3 border-b border-hairline">
+          <span class="font-mono text-[11px] uppercase tracking-widest text-muted">
+            National Index Snapshot
+          </span>
+          <span class="font-mono text-[11px] text-forest font-semibold">
+            CUE · TVETA · MoH
+          </span>
+        </div>
+
+        <dl class="grid grid-cols-2 gap-4">
+          <div class="border border-hairline bg-limestone/30 p-3.5">
+            <dt class="font-mono text-[10px] uppercase tracking-wider text-muted">
+              Showcase Institutions
+            </dt>
+            <dd class="font-serif text-2xl sm:text-3xl font-semibold text-ink tabular-nums mt-1">
+              {totalInstitutions}
+              <span class="font-mono text-xs font-normal text-muted block">2,000+ target registry</span>
+            </dd>
+          </div>
+          <div class="border border-hairline bg-limestone/30 p-3.5">
+            <dt class="font-mono text-[10px] uppercase tracking-wider text-muted">
+              Counties Mapped
+            </dt>
+            <dd class="font-serif text-2xl sm:text-3xl font-semibold text-forest tabular-nums mt-1">
+              {indexedCountiesCount} / 47
+              <span class="font-mono text-xs font-normal text-muted block">8 Kenyan regions</span>
+            </dd>
+          </div>
+          <div class="border border-hairline bg-limestone/30 p-3.5">
+            <dt class="font-mono text-[10px] uppercase tracking-wider text-muted">
+              Est. Students Represented
+            </dt>
+            <dd class="font-serif text-2xl font-semibold text-ink tabular-nums mt-1">
+              {totalEnrollment.toLocaleString()}
+            </dd>
+          </div>
+          <div class="border border-hairline bg-limestone/30 p-3.5">
+            <dt class="font-mono text-[10px] uppercase tracking-wider text-muted">
+              Catalogued Tracks
+            </dt>
+            <dd class="font-serif text-2xl font-semibold text-ink tabular-nums mt-1">
+              {totalCourses}
+            </dd>
+          </div>
+        </dl>
+
+        <div class="pt-3 border-t border-hairline flex flex-wrap items-center justify-between gap-2 text-xs">
+          <span class="text-muted">Student or Lecturer?</span>
+          <div class="flex items-center gap-4 font-semibold">
+            <a href="/oer" class="text-forest hover:underline">OER Library →</a>
+            <a href="/login" class="text-lapis hover:underline">Sign In →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 1: Interactive 47-County Geographic Map of Kenya -->
+    <div id="kenya-map" class="scroll-mt-20">
+      <KenyaInteractiveMap
+        institutions={PUBLIC_INSTITUTIONS}
+        countyRegions={countyRegions}
+        client:load
+      />
+    </div>
+
+    <!-- Section 2: Featured University, TVET & KMTC Monographs -->
+    <section class="space-y-5">
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-2 border-b border-hairline pb-3">
+        <div>
+          <p class="font-mono text-[11px] uppercase tracking-widest text-muted">
+            Editorial Highlights
+          </p>
+          <h2 class="font-serif text-2xl sm:text-3xl font-semibold text-ink mt-0.5">
+            Featured University, National Polytechnic &amp; KMTC Profiles
+          </h2>
+        </div>
+        <a
+          href="/compare?ids=university-of-nairobi,the-nairobi-national-polytechnic,kmtc-nairobi-main"
+          class="text-xs font-semibold text-forest hover:underline whitespace-nowrap"
+        >
+          Compare These Three Side-by-Side →
+        </a>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {featuredInstitutions.map((inst) => (
+          <article class="border border-hairline bg-paper flex flex-col hover:border-ink/40 transition-colors">
+            <a
+              href={`/institutions/${inst.slug}`}
+              class="block aspect-[16/9] bg-limestone border-b border-hairline overflow-hidden relative group"
+            >
+              <img
+                src={inst.cover_image_url}
+                alt={`${inst.name} campus`}
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                class="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+              />
+              <span class="absolute top-2.5 left-2.5 bg-paper/95 border border-hairline px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-ink">
+                {inst.type === 'university'
+                  ? 'Chartered University'
+                  : inst.type === 'tvet'
+                    ? 'National Polytechnic'
+                    : 'Allied Health (KMTC)'}
+              </span>
+            </a>
+
+            <div class="p-5 flex-1 flex flex-col justify-between gap-4">
+              <div>
+                <p class="font-mono text-[11px] text-muted">
+                  {inst.county} County · {inst.registration_number}
+                </p>
+                <h3 class="font-serif text-xl font-semibold text-ink mt-1.5">
+                  <a href={`/institutions/${inst.slug}`} class="hover:text-forest hover:underline">
+                    {inst.name}
+                  </a>
+                </h3>
+                <p class="mt-2 text-sm text-muted leading-relaxed line-clamp-3">
+                  {inst.description}
+                </p>
+              </div>
+
+              <div class="pt-3 border-t border-hairline flex items-center justify-between text-xs">
+                <span class="font-mono text-muted tabular-nums">
+                  ~{inst.estimated_student_count.toLocaleString()} students
+                </span>
+                <a
+                  href={`/institutions/${inst.slug}`}
+                  class="font-semibold text-forest hover:underline"
+                >
+                  Open Monograph →
+                </a>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <!-- Section 3: Full Searchable & Filterable Index -->
+    <section id="directory-table" class="space-y-5 scroll-mt-20">
+      <div class="border-b border-hairline pb-3">
+        <p class="font-mono text-[11px] uppercase tracking-widest text-muted">
+          Complete Searchable Registry
+        </p>
+        <h2 class="font-serif text-2xl sm:text-3xl font-semibold text-ink mt-0.5">
+          Filter by Institution Type, TVET Tier, Region, or Modality
+        </h2>
+      </div>
+
+      <DirectoryExplorer institutions={PUBLIC_INSTITUTIONS} client:load />
+    </section>
+
+    <!-- Section 4: Practitioner & Institutional Pathways -->
+    <section class="border border-hairline bg-limestone/40 p-6 sm:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+      <div class="lg:col-span-7 space-y-2">
+        <p class="font-mono text-[11px] uppercase tracking-widest text-muted">
+          For Students, Educators &amp; Registrars
+        </p>
+        <h2 class="font-serif text-2xl font-semibold text-ink">
+          Free-access OER textbooks, instructor tools &amp; registry verification.
+        </h2>
+        <p class="text-sm text-muted leading-relaxed max-w-2xl">
+          Browse open textbooks in the{' '}
+          <a href="/oer" class="text-forest font-semibold hover:underline">OER Library</a>,
+          explore <strong>Class Manager</strong> and <strong>Practicum Manager</strong> under{' '}
+          <a href="/for-educators" class="text-forest font-semibold hover:underline">Educators</a>,
+          or reach out via{' '}
+          <a href="/contact" class="text-forest font-semibold hover:underline">Contact</a> to
+          update an institution’s public record.
+        </p>
+      </div>
+      <div class="lg:col-span-5 flex flex-wrap lg:justify-end gap-2.5">
+        <a
+          href="/oer"
+          class="px-4 py-2.5 border border-ink bg-paper text-ink text-xs sm:text-sm font-semibold hover:bg-ink hover:text-paper transition-colors whitespace-nowrap"
+        >
+          OER Library &amp; Reader
+        </a>
+        <a
+          href="/login"
+          class="px-4 py-2.5 bg-forest text-paper text-xs sm:text-sm font-semibold hover:bg-ink transition-colors whitespace-nowrap"
+        >
+          Sign In
+        </a>
+        <a
+          href="/contact"
+          class="px-4 py-2.5 border border-hairline bg-paper text-ink text-xs sm:text-sm font-semibold hover:border-ink transition-colors whitespace-nowrap"
+        >
+          Contact Us
+        </a>
+      </div>
+    </section>
+  </div>
+
+  <script is:inline>
+    const heroAskBtn = document.getElementById('hero-open-discovery');
+    if (heroAskBtn) {
+      heroAskBtn.addEventListener('click', () => {
+        window.dispatchEvent(new CustomEvent('schologic:open-discovery'));
+      });
+    }
+  </script>
+</BaseLayout>

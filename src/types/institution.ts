@@ -1,8 +1,6 @@
 export type InstitutionType = 'university' | 'tvet' | 'kmtc';
 export type TvetCategory = 'NP' | 'TVC' | 'VTC';
 export type OwnershipType = 'public' | 'private';
-export type OperationalStatus = 'active' | 'inactive' | 'pending';
-export type SyncStatus = 'not synced' | 'synced';
 
 export interface CourseItem {
   code: string;
@@ -26,137 +24,120 @@ export interface ModalityRecord {
   notes?: string;
 }
 
-export interface ResearchDimensions {
-  program_breadth: number;
-  digital_readiness: number;
-  facility_capacity: number;
-  verification_integrity: number;
-}
-
-export interface ResearchDataPayload {
-  charter_year?: number;
-  founded_year?: number;
-  faculty_student_ratio?: string;
-  flagship_disciplines: string[];
-  annual_publications_estimate?: number;
-  industry_partners_count?: number;
-  dimensions: ResearchDimensions;
-}
-
-export interface GoogleMapsData {
-  lat: number;
-  lng: number;
-  place_name: string;
-}
-
 export interface AffiliationItem {
   body: string;
   role: string;
 }
 
-export interface ProfileSummaryPoint {
-  label: string;
-  detail: string;
+export interface SocialMediaLink {
+  platform: 'X' | 'LinkedIn' | 'Facebook' | 'YouTube' | 'Instagram';
+  handle: string;
+  url: string;
 }
 
-export interface InstitutionRecord {
+export interface PublicGeoPoint {
+  lat: number;
+  lng: number;
+  place_name: string;
+}
+
+/**
+ * Sanitized public projection for schologic.org (equivalent to a SQL VIEW
+ * filtered by duplicate_of IS NULL AND operational_status = 'active').
+ * Strictly excludes personal_contacts PII and internal ETL/staging metadata.
+ */
+export interface PublicInstitution {
   id: string;
+  slug: string;
+  portal_subdomain: string | null;
+  custom_portal_domain: string | null;
   name: string;
-  aliases: string[] | null;
+  aliases: string[];
   registration_number: string | null;
   type: InstitutionType;
   category: TvetCategory | null;
-  ownership: OwnershipType | null;
-  operational_status: OperationalStatus | null;
+  ownership: OwnershipType;
+  county: string;
+  region: string;
+  town: string;
+  location: string;
+  geo: PublicGeoPoint | null;
+  website: string | null;
   email: string | null;
   phone: string | null;
-  website: string | null;
-  county: string | null;
-  region: string | null;
-  town: string | null;
-  address: string | null;
-  location: string | null;
-  google_maps_data: GoogleMapsData | null;
-  description: string | null;
-  about: string | null;
-  logo_url: string | null;
-  cover_image_url: string | null;
+  cover_image_url: string;
+  description: string;
+  about: string;
+  founded_year: number | null;
+  charter_year: number | null;
+  faculty_student_ratio: string | null;
+  estimated_student_count: number;
+  flagship_disciplines: string[];
   facilities: string[];
   accreditations: string[];
   courses: CourseItem[];
   campuses: CampusItem[];
+  affiliation: AffiliationItem[];
   has_elearning: ModalityRecord[];
   has_distance_learning: ModalityRecord[];
   has_teaching_courses: ModalityRecord[];
-  data_source: string | null;
-  source_url: string | null;
+  social_media: SocialMediaLink[];
   is_verified: boolean;
-  verified_at: string | null;
-  created_at: string;
-  updated_at: string;
-  estimated_student_count: number | null;
-  health_score: number;
-  research_score: number;
-  parent_institution_id: string | null;
-  main_institution_id: string | null;
-  verified_fields_jsonb: string[];
-  research_data: ResearchDataPayload;
-  affiliation: AffiliationItem[];
-  sync_status: SyncStatus;
-  profile_summary: ProfileSummaryPoint[];
+  parent_institution_slug: string | null;
+  parent_institution_name: string | null;
 }
 
-export type RadarAxisKey =
-  | 'health_score'
-  | 'research_score'
-  | 'program_breadth'
-  | 'digital_readiness'
-  | 'facility_capacity'
-  | 'verification_integrity';
+export type PublicRadarAxisKey =
+  | 'curriculum_depth'
+  | 'digital_learning'
+  | 'practicum_readiness'
+  | 'campus_facilities'
+  | 'regional_footprint'
+  | 'registry_standing';
 
-export interface RadarAxisMeta {
-  key: RadarAxisKey;
+export interface PublicRadarAxisMeta {
+  key: PublicRadarAxisKey;
   label: string;
   shortLabel: string;
   description: string;
 }
 
-export const RADAR_AXES: RadarAxisMeta[] = [
+export const PUBLIC_RADAR_AXES: PublicRadarAxisMeta[] = [
   {
-    key: 'health_score',
-    label: 'Operational Health',
-    shortLabel: 'Health',
-    description: 'Schema health_score reflecting operational status, contact completeness, and record hygiene (0–100).',
+    key: 'curriculum_depth',
+    label: 'Program & Course Depth',
+    shortLabel: 'Programs',
+    description: 'Diversity of catalogued qualifications across degree, higher diploma, diploma, and certificate tracks.',
   },
   {
-    key: 'research_score',
-    label: 'Research Output',
-    shortLabel: 'Research',
-    description: 'Schema research_score capturing scholarly citations, grants, and technical innovation activity (0–100).',
-  },
-  {
-    key: 'program_breadth',
-    label: 'Curriculum Breadth',
-    shortLabel: 'Curriculum',
-    description: 'Normalized index of accredited qualifications across degree, diploma, and trade tiers.',
-  },
-  {
-    key: 'digital_readiness',
-    label: 'Digital & E-Learning',
+    key: 'digital_learning',
+    label: 'Digital & ODeL Readiness',
     shortLabel: 'Digital',
-    description: 'Availability and depth of has_elearning, LMS platforms, and distance learning infrastructure.',
+    description: 'Active e-learning platforms, distance-learning centres, and virtual course availability.',
   },
   {
-    key: 'facility_capacity',
+    key: 'practicum_readiness',
+    label: 'Practicum & Clinical Focus',
+    shortLabel: 'Practicum',
+    description: 'Strength of teaching practice, hospital clinical rotations, or technical workshop attachments.',
+  },
+  {
+    key: 'campus_facilities',
     label: 'Facilities & Labs',
     shortLabel: 'Facilities',
-    description: 'Physical laboratories, teaching hospitals, workshops, libraries, and multi-campus reach.',
+    description: 'Indexed libraries, research centres, specialized laboratories, and practical studios.',
   },
   {
-    key: 'verification_integrity',
-    label: 'Record Verification',
-    shortLabel: 'Verified',
-    description: 'Percentage of verified_fields_jsonb coverage and regulatory accreditation alignment.',
+    key: 'regional_footprint',
+    label: 'Campus Footprint',
+    shortLabel: 'Campuses',
+    description: 'Multi-campus presence, county coverage, and hybrid delivery reach across Kenya.',
+  },
+  {
+    key: 'registry_standing',
+    label: 'Accreditation Standing',
+    shortLabel: 'Accredited',
+    description: 'Verified registration with CUE, TVETA, Ministry of Health, and professional statutory boards.',
   },
 ];
 
@@ -165,48 +146,62 @@ export const SERIES_PALETTE = [
     name: 'Forest Ink',
     hex: '#14532D',
     fill: 'rgba(20, 83, 45, 0.16)',
-    borderClass: 'border-[#14532D]',
-    textClass: 'text-[#14532D]',
-    bgClass: 'bg-[#14532D]',
     dash: undefined,
   },
   {
     name: 'Deep Lapis',
     hex: '#1E3A8A',
     fill: 'rgba(30, 58, 138, 0.14)',
-    borderClass: 'border-[#1E3A8A]',
-    textClass: 'text-[#1E3A8A]',
-    bgClass: 'bg-[#1E3A8A]',
     dash: '6 3',
   },
   {
     name: 'Warm Terracotta',
     hex: '#9A3412',
     fill: 'rgba(154, 52, 18, 0.14)',
-    borderClass: 'border-[#9A3412]',
-    textClass: 'text-[#9A3412]',
-    bgClass: 'bg-[#9A3412]',
     dash: '2 3',
   },
   {
     name: 'Burnished Bronze',
     hex: '#92400E',
     fill: 'rgba(146, 64, 14, 0.14)',
-    borderClass: 'border-[#92400E]',
-    textClass: 'text-[#92400E]',
-    bgClass: 'bg-[#92400E]',
     dash: '8 3 2 3',
   },
 ] as const;
 
-export function getRadarScores(inst: InstitutionRecord): Record<RadarAxisKey, number> {
+export function getPublicRadarScores(inst: PublicInstitution): Record<PublicRadarAxisKey, number> {
+  const levels = new Set(inst.courses.map((c) => c.level));
+  const curriculum_depth = Math.min(100, 42 + inst.courses.length * 10 + levels.size * 6);
+
+  const hasE = inst.has_elearning?.[0]?.enabled ? 38 : 0;
+  const eCount = Math.min(34, (inst.has_elearning?.[0]?.program_count ?? 0) * 0.6);
+  const hasD = inst.has_distance_learning?.[0]?.enabled ? 22 : 0;
+  const digital_learning = Math.min(100, Math.round(20 + hasE + eCount + hasD));
+
+  const hasTeaching = inst.has_teaching_courses?.[0]?.enabled ? 28 : 0;
+  const typePracticumBonus = inst.type === 'kmtc' ? 42 : inst.type === 'tvet' ? 36 : 18;
+  const facilityPracticum = Math.min(26, inst.facilities.length * 5);
+  const practicum_readiness = Math.min(100, 14 + hasTeaching + typePracticumBonus + facilityPracticum);
+
+  const campus_facilities = Math.min(100, 38 + inst.facilities.length * 11);
+
+  const uniqueCounties = new Set(inst.campuses.map((c) => c.county)).size;
+  const regional_footprint = Math.min(
+    100,
+    30 + inst.campuses.length * 11 + uniqueCounties * 8 + (inst.has_distance_learning?.[0]?.enabled ? 12 : 0)
+  );
+
+  const registry_standing = Math.min(
+    100,
+    (inst.is_verified ? 52 : 25) + inst.accreditations.length * 11 + (inst.registration_number ? 8 : 0)
+  );
+
   return {
-    health_score: inst.health_score ?? 0,
-    research_score: inst.research_score ?? 0,
-    program_breadth: inst.research_data?.dimensions?.program_breadth ?? 50,
-    digital_readiness: inst.research_data?.dimensions?.digital_readiness ?? 45,
-    facility_capacity: inst.research_data?.dimensions?.facility_capacity ?? 50,
-    verification_integrity: inst.research_data?.dimensions?.verification_integrity ?? (inst.is_verified ? 85 : 40),
+    curriculum_depth,
+    digital_learning,
+    practicum_readiness,
+    campus_facilities,
+    regional_footprint,
+    registry_standing,
   };
 }
 
@@ -230,6 +225,13 @@ export function formatCategoryLabel(category: TvetCategory | null): string {
     case 'VTC':
       return 'Vocational Training Center (VTC)';
     default:
-      return 'Standard Chartered';
+      return 'Chartered Institution';
   }
+}
+
+export function slugifyCounty(county: string): string {
+  return county
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
 }

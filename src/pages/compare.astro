@@ -1,0 +1,37 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ComparisonWorkbench from '../components/ComparisonWorkbench';
+import { PUBLIC_INSTITUTIONS } from '../data/publicInstitutions';
+---
+
+<BaseLayout
+  title="Side-by-Side Comparison Studio | schologic.org"
+  description="Compare up to four Kenyan universities, National Polytechnics, TVETs, and KMTC campuses across 6 public capability axes, enrollment metrics, and accreditation profiles."
+  activeNav="compare"
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+    <header class="border-b border-hairline pb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div>
+        <p class="font-mono text-[11px] uppercase tracking-widest text-forest font-semibold">
+          Comparative Analytics Studio
+        </p>
+        <h1 class="font-serif text-3xl sm:text-4xl font-semibold text-ink mt-1.5">
+          Side-by-Side Kenyan Institution Comparison
+        </h1>
+        <p class="mt-2 text-sm sm:text-base text-muted max-w-2xl leading-relaxed">
+          Benchmark up to four accredited institutions across program depth, digital ODeL
+          readiness, practicum focus, lab infrastructure, campus footprint, and statutory standing.
+        </p>
+      </div>
+
+      <a
+        href="/"
+        class="px-3.5 py-2 border border-hairline bg-limestone/50 text-xs font-semibold text-ink hover:border-ink transition-colors whitespace-nowrap self-start md:self-auto"
+      >
+        ← Return to Directory
+      </a>
+    </header>
+
+    <ComparisonWorkbench institutions={PUBLIC_INSTITUTIONS} client:load />
+  </div>
+</BaseLayout>
