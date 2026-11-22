@@ -1,0 +1,6 @@
+{
+  "name": "Kenyan Academic Institutions Index",
+  "description": "Editorial directory, schema-matched dossier profiles, and comparative radar analytics for Kenyan universities, TVETs, and KMTC campuses.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
