@@ -1,21 +1,22 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, ArrowRight, KeyRound } from 'lucide-react';
-import { type PublicInstitution, formatTypeLabel } from '../types/institution';
+import { CheckCircle2, ArrowRight, KeyRound, Search } from 'lucide-react';
+import { type PublicInstitutionSummary, formatTypeLabel } from '../types/institution';
+import { useInstitutionsIndex } from '../lib/institutionClientIndex';
 
 interface Props {
-  institutions: PublicInstitution[];
+  initialInstitutions: PublicInstitutionSummary[];
 }
 
 const TOOL_MODULES = [
   {
     id: 'class-manager',
     label: 'Class Manager',
-    summary: 'Units, cohorts, attendance & gradebook oversight',
+    summary: 'Units, cohorts, attendance & gradebook oversight inside Schologic LMS',
   },
   {
     id: 'oer-reader',
     label: 'OER Library & Universal Reader',
-    summary: 'Zero-cost open textbooks packaged for mobile & labs',
+    summary: 'Zero-cost open textbooks packaged for mobile & campus labs',
   },
   {
     id: 'ai-assistant',
@@ -29,8 +30,11 @@ const TOOL_MODULES = [
   },
 ] as const;
 
-export default function FreeTierOnboarding({ institutions }: Props) {
-  const [selectedSlug, setSelectedSlug] = useState<string>(institutions[0]?.slug ?? '');
+export default function FreeTierOnboarding({ initialInstitutions }: Props) {
+  const { institutions } = useInstitutionsIndex(initialInstitutions);
+
+  const [instFilter, setInstFilter] = useState('');
+  const [selectedSlug, setSelectedSlug] = useState<string>(initialInstitutions[0]?.slug ?? '');
   const [role, setRole] = useState<'instructor' | 'practicum' | 'department'>('instructor');
   const [email, setEmail] = useState('');
   const [courseCode, setCourseCode] = useState('');
@@ -55,15 +59,26 @@ export default function FreeTierOnboarding({ institutions }: Props) {
     }
   }, [institutions]);
 
+  const filteredOptions = useMemo(() => {
+    const q = instFilter.trim().toLowerCase();
+    if (!q) return institutions.slice(0, 150);
+    return institutions
+      .filter(
+        (i) =>
+          i.name.toLowerCase().includes(q) ||
+          i.county.toLowerCase().includes(q) ||
+          i.slug.includes(q)
+      )
+      .slice(0, 150);
+  }, [institutions, instFilter]);
+
   const selectedInst = useMemo(
-    () => institutions.find((i) => i.slug === selectedSlug) ?? institutions[0],
-    [institutions, selectedSlug]
+    () => institutions.find((i) => i.slug === selectedSlug) ?? filteredOptions[0] ?? institutions[0],
+    [institutions, filteredOptions, selectedSlug]
   );
 
   const portalHost =
-    selectedInst?.custom_portal_domain ??
-    selectedInst?.portal_subdomain ??
-    `${selectedInst?.slug ?? 'yourcampus'}.schologic.org`;
+    selectedInst?.portal_subdomain ?? `${selectedInst?.slug ?? 'yourcampus'}.schologic.org`;
 
   const toggleTool = (id: string) => {
     setSelectedTools((prev) =>
@@ -90,7 +105,7 @@ export default function FreeTierOnboarding({ institutions }: Props) {
           <CheckCircle2 className="w-6 h-6 text-forest shrink-0 mt-0.5" />
           <div>
             <p className="font-mono text-[11px] uppercase tracking-widest text-forest font-semibold">
-              Free-Tier Workspace Ready (Preview)
+              Schologic LMS Workspace Ready (Preview)
             </p>
             <h2 className="font-serif text-2xl font-semibold text-ink mt-1">
               {provisionedSummary.host}
@@ -99,7 +114,7 @@ export default function FreeTierOnboarding({ institutions }: Props) {
         </div>
 
         <p className="text-sm text-muted leading-relaxed">
-          Your free-tier practitioner setup for{' '}
+          Your free-tier Schologic LMS portal for{' '}
           <strong className="text-ink">{provisionedSummary.institutionName}</strong> (
           <span className="font-mono text-ink">{provisionedSummary.email}</span>) has been
           configured with {provisionedSummary.tools.length} active modules. Students join using
@@ -108,7 +123,7 @@ export default function FreeTierOnboarding({ institutions }: Props) {
 
         <div className="border border-hairline bg-limestone/35 p-4 text-xs space-y-1.5">
           <div className="font-mono uppercase tracking-wider text-muted">
-            Selected Capabilities
+            Selected Schologic LMS Capabilities
           </div>
           <ul className="space-y-1 text-ink">
             {provisionedSummary.tools.map((t) => {
@@ -123,7 +138,7 @@ export default function FreeTierOnboarding({ institutions }: Props) {
             href="/login"
             className="px-4 py-2.5 bg-forest text-paper text-xs font-semibold hover:bg-ink transition-colors"
           >
-            Continue to Login
+            Continue to Schologic LMS Login
           </a>
           <button
             type="button"
@@ -145,7 +160,7 @@ export default function FreeTierOnboarding({ institutions }: Props) {
       <div className="pb-4 border-b border-hairline">
         <p className="font-mono text-[11px] uppercase tracking-widest text-forest font-semibold flex items-center gap-1.5">
           <KeyRound className="w-3.5 h-3.5" />
-          Instant Free-Tier Subdomain Setup
+          Instant Schologic LMS Portal Setup
         </p>
         <h2 className="font-serif text-2xl font-semibold text-ink mt-1">
           Provision Your Course or Practicum Workspace
@@ -153,24 +168,40 @@ export default function FreeTierOnboarding({ institutions }: Props) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-sm">
-        <div>
-          <label htmlFor="onboard-inst" className="block font-medium text-ink mb-1.5">
-            1. Select Kenyan Institution
+        <div className="space-y-2">
+          <label htmlFor="onboard-inst" className="block font-medium text-ink">
+            1. Select Kenyan Institution ({institutions.length.toLocaleString()} indexed)
           </label>
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 text-muted absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="search"
+              value={instFilter}
+              onChange={(e) => setInstFilter(e.target.value)}
+              placeholder="Search institution or county..."
+              aria-label="Filter institution list"
+              className="w-full pl-8 pr-3 py-2 border border-hairline bg-paper text-ink text-xs focus:outline-none focus:border-forest"
+            />
+          </div>
           <select
             id="onboard-inst"
             value={selectedSlug}
             onChange={(e) => setSelectedSlug(e.target.value)}
             className="w-full px-3 py-2.5 border border-hairline bg-paper text-ink text-sm focus:outline-none focus:border-forest"
           >
-            {institutions.map((inst) => (
+            {selectedInst && !filteredOptions.some((o) => o.slug === selectedInst.slug) && (
+              <option value={selectedInst.slug}>
+                {selectedInst.name} ({formatTypeLabel(selectedInst.type)} · {selectedInst.county})
+              </option>
+            )}
+            {filteredOptions.map((inst) => (
               <option key={inst.slug} value={inst.slug}>
                 {inst.name} ({formatTypeLabel(inst.type)} · {inst.county})
               </option>
             ))}
           </select>
-          <p className="mt-1.5 font-mono text-[11px] text-muted">
-            Assigned endpoint: <span className="text-forest font-semibold">{portalHost}</span>
+          <p className="font-mono text-[11px] text-muted">
+            Schologic LMS endpoint: <span className="text-forest font-semibold">{portalHost}</span>
           </p>
         </div>
 
@@ -225,7 +256,7 @@ export default function FreeTierOnboarding({ institutions }: Props) {
 
       <div className="space-y-2.5 pt-2 border-t border-hairline">
         <span className="block text-sm font-medium text-ink">
-          5. Enable Free-Tier Capabilities
+          5. Enable Free-Tier Schologic LMS Capabilities
         </span>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {TOOL_MODULES.map((mod) => {
@@ -257,7 +288,7 @@ export default function FreeTierOnboarding({ institutions }: Props) {
 
       <div className="pt-3 border-t border-hairline flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <p className="text-xs text-muted">
-          Institution-wide deployment with custom domains?{' '}
+          Institution-wide Schologic LMS deployment with custom domains?{' '}
           <a
             href="https://schologic.com/demo"
             target="_blank"

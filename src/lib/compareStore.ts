@@ -1,7 +1,7 @@
 export const DEFAULT_COMPARE_SLUGS = [
-  'university-of-nairobi',
-  'strathmore-university',
-  'the-nairobi-national-polytechnic',
+  'moi-university',
+  'technical-university-of-kenya',
+  'the-eldoret-national-polytechnic',
 ];
 
 const STORAGE_KEY = 'schologic_compare_slugs';

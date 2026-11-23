@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import ComparisonWorkbench from '../components/ComparisonWorkbench';
-import { PUBLIC_INSTITUTIONS } from '../data/publicInstitutions';
+import { CURATED_INSTITUTION_SUMMARIES } from '../data/publicInstitutions';
 ---
 
 <BaseLayout
@@ -25,13 +25,13 @@ import { PUBLIC_INSTITUTIONS } from '../data/publicInstitutions';
       </div>
 
       <a
-        href="/"
+        href="/directory"
         class="px-3.5 py-2 border border-hairline bg-limestone/50 text-xs font-semibold text-ink hover:border-ink transition-colors whitespace-nowrap self-start md:self-auto"
       >
-        ← Return to Directory
+        ← Browse Full Directory
       </a>
     </header>
 
-    <ComparisonWorkbench institutions={PUBLIC_INSTITUTIONS} client:load />
+    <ComparisonWorkbench initialInstitutions={CURATED_INSTITUTION_SUMMARIES} client:load />
   </div>
 </BaseLayout>

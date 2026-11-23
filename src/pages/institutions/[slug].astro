@@ -19,13 +19,19 @@ const { institution } = Astro.props;
 
 const countySlug = slugifyCounty(institution.county);
 const portalHost = institution.custom_portal_domain ?? institution.portal_subdomain;
-const branchCampuses = PUBLIC_INSTITUTIONS.filter(
-  (i) => i.parent_institution_slug === institution.slug
-);
-const initials = (institution.aliases[0] ?? institution.name)
-  .replace(/[^A-Za-z0-9]/g, '')
-  .slice(0, 4)
-  .toUpperCase();
+
+const nameWords = institution.name
+  .replace(/[^A-Za-z0-9\s]/g, ' ')
+  .split(/\s+/)
+  .filter((w) => w.length > 0 && !['of', 'and', 'the', 'for', 'in', 'at'].includes(w.toLowerCase()));
+const initials =
+  nameWords.length <= 1
+    ? (nameWords[0] ?? 'KE').slice(0, 3).toUpperCase()
+    : nameWords
+        .slice(0, 3)
+        .map((w) => w[0])
+        .join('')
+        .toUpperCase();
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -33,6 +39,7 @@ const jsonLd = {
   name: institution.name,
   alternateName: institution.aliases,
   url: institution.website ?? `https://schologic.org/institutions/${institution.slug}`,
+  hasMap: institution.google_maps_url,
   description: institution.description,
   address: {
     '@type': 'PostalAddress',
@@ -56,7 +63,9 @@ const jsonLd = {
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-8">
     <!-- Breadcrumb -->
     <nav aria-label="Breadcrumb" class="font-mono text-xs text-muted flex flex-wrap items-center gap-2">
-      <a href="/" class="hover:text-forest hover:underline">Directory</a>
+      <a href="/" class="hover:text-forest hover:underline">Map &amp; Rankings</a>
+      <span>/</span>
+      <a href="/directory" class="hover:text-forest hover:underline">Directory</a>
       <span>/</span>
       <a href={`/counties/${countySlug}`} class="hover:text-forest hover:underline">
         {institution.county} County
@@ -65,100 +74,123 @@ const jsonLd = {
       <span class="text-ink font-medium">{institution.name}</span>
     </nav>
 
-    <!-- Monograph Header -->
-    <header class="border border-hairline bg-paper overflow-hidden">
-      <div class="grid grid-cols-1 lg:grid-cols-12">
-        <div class="lg:col-span-7 p-6 sm:p-8 flex flex-col justify-between gap-6">
-          <div>
-            <div class="flex items-start gap-4">
-              <div
-                aria-hidden="true"
-                class="w-12 h-12 shrink-0 border border-ink bg-limestone/70 flex items-center justify-center font-mono text-xs font-bold tracking-wider text-ink"
-              >
+    <!-- Monograph Header with Institutional Logo Crest & Google Maps -->
+    <header class="border border-hairline bg-paper p-6 sm:p-8 space-y-6">
+      <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+        <div class="flex items-start gap-5 flex-1">
+          <!-- Institutional Logo Crest (real logo_url with monogram fallback) -->
+          <div class="w-20 h-20 sm:w-24 sm:h-24 shrink-0 border border-hairline bg-white flex items-center justify-center overflow-hidden p-2">
+            {institution.logo_url ? (
+              <>
+                <img
+                  src={institution.logo_url}
+                  alt={`${institution.name} official logo`}
+                  referrerPolicy="no-referrer"
+                  class="w-full h-full object-contain"
+                  onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
+                />
+                <div
+                  style="display:none"
+                  class="w-full h-full items-center justify-center bg-limestone/60 font-mono text-lg font-bold tracking-wider text-ink"
+                >
+                  {initials}
+                </div>
+              </>
+            ) : (
+              <div class="w-full h-full flex items-center justify-center bg-limestone/60 font-mono text-lg font-bold tracking-wider text-ink">
                 {initials}
               </div>
-              <div>
-                <div class="font-mono text-[11px] uppercase tracking-widest text-muted flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span class="text-forest font-semibold">{formatTypeLabel(institution.type)}</span>
-                  <span>·</span>
-                  <span class="capitalize">{institution.ownership}</span>
-                  <span>·</span>
-                  <span>{institution.registration_number ?? 'Registry Pending'}</span>
-                  {institution.is_verified && (
-                    <>
-                      <span>·</span>
-                      <span class="text-forest">Verified Record</span>
-                    </>
-                  )}
-                </div>
-
-                <h1 class="font-serif text-3xl sm:text-4xl font-semibold text-ink mt-1.5 leading-tight text-balance">
-                  {institution.name}
-                </h1>
-              </div>
-            </div>
-
-            {institution.aliases.length > 0 && (
-              <p class="mt-3 font-mono text-xs text-muted">
-                Also indexed as: {institution.aliases.join(' · ')}
-              </p>
             )}
-
-            <p class="mt-4 text-base text-muted leading-relaxed">
-              {institution.description}
-            </p>
           </div>
 
-          <div class="pt-4 border-t border-hairline flex flex-wrap items-center justify-between gap-4">
-            <div class="text-xs">
-              <span class="font-mono uppercase tracking-wider text-muted block">
-                Campus Portal Status
-              </span>
-              {portalHost ? (
-                <a
-                  href={`https://${portalHost}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="font-mono text-sm font-semibold text-lapis hover:underline mt-0.5 inline-block"
-                >
-                  {portalHost} →
-                </a>
-              ) : (
-                <a
-                  href={`/start?campus=${institution.slug}`}
-                  class="font-mono text-sm text-bronze hover:underline mt-0.5 inline-block"
-                >
-                  Claim free {institution.slug}.schologic.org portal →
-                </a>
+          <div class="min-w-0 flex-1">
+            <div class="font-mono text-[11px] uppercase tracking-widest text-muted flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span class="text-forest font-semibold">{formatTypeLabel(institution.type)}</span>
+              {institution.category && (
+                <>
+                  <span>·</span>
+                  <span>{institution.category}</span>
+                </>
+              )}
+              <span>·</span>
+              <span class="capitalize">{institution.ownership}</span>
+              <span>·</span>
+              <span>{institution.registration_number ?? 'Registry Listed'}</span>
+              {institution.is_verified && (
+                <>
+                  <span>·</span>
+                  <span class="text-forest font-semibold">Verified Record</span>
+                </>
               )}
             </div>
 
-            {institution.website && (
-              <a
-                href={institution.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="px-3.5 py-2 border border-hairline bg-limestone/50 text-xs font-semibold text-ink hover:border-ink transition-colors whitespace-nowrap"
-              >
-                Official Institution Website ↗
-              </a>
-            )}
+            <h1 class="font-serif text-3xl sm:text-4xl font-semibold text-ink mt-1.5 leading-tight text-balance">
+              {institution.name}
+            </h1>
+
+            <p class="mt-2 font-mono text-xs text-muted">
+              {institution.location}
+              {institution.geo ? ` · ${institution.geo.lat.toFixed(4)}°, ${institution.geo.lng.toFixed(4)}°` : ''}
+            </p>
           </div>
         </div>
 
-        <div class="lg:col-span-5 relative min-h-[240px] lg:min-h-full bg-limestone border-t lg:border-t-0 lg:border-l border-hairline">
-          <img
-            src={institution.cover_image_url}
-            alt={`${institution.name} campus grounds`}
-            referrerPolicy="no-referrer"
-            class="w-full h-full object-cover absolute inset-0"
-          />
-          <div class="absolute bottom-3 left-3 right-3 bg-paper/95 border border-hairline px-3 py-2 text-xs">
-            <span class="font-mono text-[10px] uppercase tracking-wider text-muted block">
-              Location{institution.geo ? ` · ${institution.geo.lat.toFixed(4)}°, ${institution.geo.lng.toFixed(4)}°` : ''}
-            </span>
-            <span class="text-ink font-medium">{institution.location}</span>
-          </div>
+        <!-- Primary External Actions: Google Maps + Website -->
+        <div class="flex flex-wrap items-center gap-2.5 shrink-0">
+          <a
+            href={institution.google_maps_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center gap-1.5 px-4 py-2.5 bg-forest text-paper text-xs sm:text-sm font-semibold hover:bg-ink transition-colors whitespace-nowrap"
+          >
+            {institution.has_verified_maps_url ? 'Open in Google Maps ↗' : 'Find on Google Maps ↗'}
+          </a>
+
+          {institution.website && (
+            <a
+              href={institution.website}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-1.5 px-4 py-2.5 border border-hairline bg-limestone/50 text-xs sm:text-sm font-semibold text-ink hover:border-ink transition-colors whitespace-nowrap"
+            >
+              Official Website ↗
+            </a>
+          )}
+        </div>
+      </div>
+
+      <p class="text-base text-muted leading-relaxed max-w-4xl">
+        {institution.description}
+      </p>
+
+      <!-- Schologic LMS Strip -->
+      <div class="pt-4 border-t border-hairline flex flex-wrap items-center justify-between gap-4 text-xs">
+        <div>
+          <span class="font-mono uppercase tracking-wider text-muted block">
+            Schologic LMS Portal Status
+          </span>
+          {portalHost ? (
+            <a
+              href={`https://${portalHost}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="font-mono text-sm font-semibold text-lapis hover:underline mt-0.5 inline-block"
+            >
+              {portalHost} (Schologic LMS) →
+            </a>
+          ) : (
+            <a
+              href={`/start?campus=${institution.slug}`}
+              class="font-mono text-sm text-bronze hover:underline mt-0.5 inline-block"
+            >
+              Claim free {institution.slug}.schologic.org Schologic LMS portal →
+            </a>
+          )}
+        </div>
+
+        <div class="font-mono text-xs text-muted tabular-nums">
+          Composite Index Score:{' '}
+          <strong class="text-forest text-sm">{institution.ranking_scores.composite} / 100</strong>
         </div>
       </div>
     </header>
@@ -196,16 +228,9 @@ const jsonLd = {
               </dd>
             </div>
             <div>
-              <dt class="font-mono uppercase tracking-wider text-muted">Faculty Ratio</dt>
+              <dt class="font-mono uppercase tracking-wider text-muted">Catalogued Tracks</dt>
               <dd class="mt-1 font-mono font-semibold text-ink tabular-nums">
-                {institution.faculty_student_ratio ?? 'Not published'}
-              </dd>
-            </div>
-            <div>
-              <dt class="font-mono uppercase tracking-wider text-muted">Founded / Charter</dt>
-              <dd class="mt-1 font-mono text-ink tabular-nums">
-                {institution.founded_year ?? '—'}
-                {institution.charter_year ? ` (Charter ${institution.charter_year})` : ''}
+                {institution.total_courses_count} programmes
               </dd>
             </div>
             <div>
@@ -218,11 +243,26 @@ const jsonLd = {
               </dd>
             </div>
             <div>
+              <dt class="font-mono uppercase tracking-wider text-muted">Google Maps</dt>
+              <dd class="mt-1">
+                <a
+                  href={institution.google_maps_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="font-mono text-lapis hover:underline"
+                >
+                  {institution.has_verified_maps_url ? 'Verified Maps Pin ↗' : 'Search Campus Map ↗'}
+                </a>
+              </dd>
+            </div>
+            <div>
               <dt class="font-mono uppercase tracking-wider text-muted">Public Registry Contact</dt>
               <dd class="mt-1 text-ink space-y-0.5">
                 {institution.email && <div class="truncate">{institution.email}</div>}
                 {institution.phone && <div class="font-mono text-muted">{institution.phone}</div>}
-                {!institution.email && !institution.phone && <div>See official website</div>}
+                {!institution.email && !institution.phone && (
+                  <div>{institution.website ? 'See official website' : 'Via CUE / TVETA registry'}</div>
+                )}
               </dd>
             </div>
           </dl>
@@ -242,36 +282,6 @@ const jsonLd = {
               ))}
             </div>
           )}
-
-          {institution.parent_institution_slug && (
-            <div class="pt-4 border-t border-hairline text-xs">
-              <span class="font-mono uppercase tracking-wider text-muted">Constituent of: </span>
-              <a
-                href={`/institutions/${institution.parent_institution_slug}`}
-                class="font-semibold text-forest hover:underline"
-              >
-                {institution.parent_institution_name} →
-              </a>
-            </div>
-          )}
-
-          {branchCampuses.length > 0 && (
-            <div class="pt-4 border-t border-hairline text-xs space-y-2">
-              <span class="font-mono uppercase tracking-wider text-muted block">
-                Indexed Constituent Campuses
-              </span>
-              <div class="flex flex-wrap gap-2">
-                {branchCampuses.map((branch) => (
-                  <a
-                    href={`/institutions/${branch.slug}`}
-                    class="px-3 py-1.5 border border-hairline bg-limestone/40 text-ink hover:border-forest hover:text-forest transition-colors"
-                  >
-                    {branch.name} ({branch.county}) →
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
         </section>
 
         <!-- Catalogued Courses Table -->
@@ -282,7 +292,7 @@ const jsonLd = {
                 Academic Offerings
               </p>
               <h2 class="font-serif text-2xl font-semibold text-ink mt-0.5">
-                Representative Accredited Programmes
+                Accredited Programmes
               </h2>
             </div>
             <span class="font-mono text-xs text-muted tabular-nums">
@@ -290,64 +300,86 @@ const jsonLd = {
             </span>
           </div>
 
-          <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr class="border-b border-hairline bg-limestone/50 font-mono text-[11px] uppercase tracking-wider text-muted">
-                  <th class="py-3 px-4">Code</th>
-                  <th class="py-3 px-4">Programme Title</th>
-                  <th class="py-3 px-4">Level</th>
-                  <th class="py-3 px-4">Duration</th>
-                  <th class="py-3 px-4">Modality</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-hairline">
-                {institution.courses.map((course) => (
-                  <tr>
-                    <td class="py-3 px-4 font-mono text-xs text-forest font-semibold whitespace-nowrap">
-                      {course.code}
-                    </td>
-                    <td class="py-3 px-4 font-medium text-ink">{course.title}</td>
-                    <td class="py-3 px-4 text-xs text-muted whitespace-nowrap">{course.level}</td>
-                    <td class="py-3 px-4 font-mono text-xs text-ink whitespace-nowrap tabular-nums">
-                      {course.duration}
-                    </td>
-                    <td class="py-3 px-4 text-xs text-muted whitespace-nowrap">{course.modality}</td>
+          {institution.courses.length > 0 ? (
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr class="border-b border-hairline bg-limestone/50 font-mono text-[11px] uppercase tracking-wider text-muted">
+                    <th class="py-3 px-4">Code / Body</th>
+                    <th class="py-3 px-4">Programme Title</th>
+                    <th class="py-3 px-4">Level</th>
+                    <th class="py-3 px-4">Modality</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody class="divide-y divide-hairline">
+                  {institution.courses.slice(0, 60).map((course) => (
+                    <tr>
+                      <td class="py-3 px-4 font-mono text-xs text-forest font-semibold whitespace-nowrap">
+                        {course.exam_body ?? course.code}
+                      </td>
+                      <td class="py-3 px-4 font-medium text-ink">{course.title}</td>
+                      <td class="py-3 px-4 text-xs text-muted whitespace-nowrap">{course.level}</td>
+                      <td class="py-3 px-4 text-xs text-muted whitespace-nowrap">{course.modality}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {institution.courses.length > 60 && (
+                <p class="px-4 py-3 text-xs font-mono text-muted bg-limestone/30 border-t border-hairline">
+                  Showing first 60 of {institution.courses.length} catalogued courses.
+                </p>
+              )}
+            </div>
+          ) : (
+            <div class="p-6 text-sm text-muted">
+              Specific programme catalogue entries for this institution are queued for verification in
+              upcoming CUE / TVETA / NITA updates.
+            </div>
+          )}
         </section>
 
-        <!-- Facilities, Accreditations & Campuses -->
+        <!-- Facilities & Accreditations -->
         <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div class="border border-hairline bg-paper p-6 space-y-3">
             <h3 class="font-serif text-xl font-semibold text-ink pb-2 border-b border-hairline">
               Facilities &amp; Labs
             </h3>
-            <ul class="space-y-2 text-sm text-ink/90">
-              {institution.facilities.map((fac) => (
-                <li class="flex items-start gap-2">
-                  <span class="font-mono text-forest mt-0.5">·</span>
-                  <span>{fac}</span>
-                </li>
-              ))}
-            </ul>
+            {institution.facilities.length > 0 ? (
+              <ul class="space-y-2 text-sm text-ink/90">
+                {institution.facilities.map((fac) => (
+                  <li class="flex items-start gap-2">
+                    <span class="font-mono text-forest mt-0.5">·</span>
+                    <span>{fac}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p class="text-xs text-muted leading-relaxed">
+                Workshops, library holdings, and campus laboratory capacities not yet individually
+                enumerated in the public registry.
+              </p>
+            )}
           </div>
 
           <div class="border border-hairline bg-paper p-6 space-y-3">
             <h3 class="font-serif text-xl font-semibold text-ink pb-2 border-b border-hairline">
               Accreditations &amp; Regulatory Standing
             </h3>
-            <ul class="space-y-2 text-sm text-ink/90">
-              {institution.accreditations.map((acc) => (
-                <li class="flex items-start gap-2">
-                  <span class="font-mono text-lapis mt-0.5">·</span>
-                  <span>{acc}</span>
-                </li>
-              ))}
-            </ul>
+            {institution.accreditations.length > 0 ? (
+              <ul class="space-y-2 text-sm text-ink/90">
+                {institution.accreditations.map((acc) => (
+                  <li class="flex items-start gap-2">
+                    <span class="font-mono text-lapis mt-0.5">·</span>
+                    <span>{acc}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p class="text-xs text-muted leading-relaxed">
+                Supervised under Kenya’s statutory higher &amp; technical education frameworks (CUE,
+                TVETA, KNEC, NITA, or Ministry of Health).
+              </p>
+            )}
             {institution.affiliation.length > 0 && (
               <div class="pt-3 border-t border-hairline text-xs text-muted">
                 {institution.affiliation.map((aff) => (
@@ -387,52 +419,58 @@ const jsonLd = {
             <div>
               <span class="font-mono uppercase tracking-wider text-muted block">E-Learning</span>
               <span class="text-ink font-medium mt-1 block">
-                {institution.has_elearning?.[0]?.enabled
-                  ? `${institution.has_elearning[0].platform ?? 'Active'} (${institution.has_elearning[0].program_count ?? 0} tracks)`
+                {institution.elearning_status !== 'none'
+                  ? `${institution.elearning_status.toUpperCase()} — ${institution.elearning_notes}`
                   : 'Not indexed'}
               </span>
             </div>
             <div>
               <span class="font-mono uppercase tracking-wider text-muted block">Distance / ODeL</span>
               <span class="text-ink font-medium mt-1 block">
-                {institution.has_distance_learning?.[0]?.enabled
-                  ? `${institution.has_distance_learning[0].platform ?? 'Active'} (${institution.has_distance_learning[0].program_count ?? 0} tracks)`
-                  : 'Full-time / campus-based'}
+                {institution.distance_status !== 'none'
+                  ? `${institution.distance_status.toUpperCase()} — ${institution.distance_notes}`
+                  : 'Campus-based delivery'}
               </span>
             </div>
             <div>
               <span class="font-mono uppercase tracking-wider text-muted block">Teaching Practicum</span>
               <span class="text-ink font-medium mt-1 block">
-                {institution.has_teaching_courses?.[0]?.enabled
-                  ? `${institution.has_teaching_courses[0].program_count ?? 1}+ Education tracks`
-                  : 'Non-education focus'}
+                {institution.teaching_enabled ? institution.teaching_notes : 'Technical / Non-education focus'}
               </span>
             </div>
           </div>
         </section>
       </div>
 
-      <!-- Right Column: Interactive Radar Island + Student/Instructor Access (4 cols) -->
+      <!-- Right Column: Interactive Radar Island + Schologic LMS Access (4 cols) -->
       <aside class="lg:col-span-4 space-y-6">
         <InstitutionCompareIsland institution={institution} client:load />
 
         <div class="border border-hairline bg-limestone/45 p-5 space-y-3">
           <p class="font-mono text-[11px] uppercase tracking-widest text-muted">
-            Schologic Workspace
+            Schologic LMS Workspace
           </p>
           <h3 class="font-serif text-lg font-semibold text-ink">
             Student &amp; Instructor Access
           </h3>
           <p class="text-xs text-muted leading-relaxed">
-            Access zero-cost OER textbooks in Universal Reader, or launch a free instructor &amp;
-            practicum cohort workspace for {institution.aliases[0] ?? institution.name}.
+            Access zero-cost OER textbooks in Universal Reader, or launch a free Schologic LMS
+            instructor &amp; practicum workspace for {institution.name}.
           </p>
           <div class="pt-2 flex flex-col gap-2 text-xs">
             <a
               href={`/start?campus=${institution.slug}`}
               class="px-3.5 py-2 bg-forest text-paper font-semibold text-center hover:bg-ink transition-colors"
             >
-              Launch / Claim {institution.slug}.schologic.org
+              Launch Schologic LMS ({institution.slug}.schologic.org)
+            </a>
+            <a
+              href={institution.google_maps_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="px-3.5 py-2 border border-hairline bg-paper text-ink font-semibold text-center hover:border-ink transition-colors"
+            >
+              Directions on Google Maps ↗
             </a>
             <a
               href="/oer"

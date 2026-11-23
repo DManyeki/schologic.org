@@ -8,10 +8,11 @@ import {
   Info,
   CheckCircle2,
   Minus,
+  ExternalLink,
 } from 'lucide-react';
 import {
   PUBLIC_RADAR_AXES,
-  type PublicInstitution,
+  type PublicInstitutionSummary,
   type PublicRadarAxisKey,
   SERIES_PALETTE,
   formatCategoryLabel,
@@ -24,36 +25,45 @@ import {
   subscribeCompareChanges,
   writeComparedSlugs,
 } from '../lib/compareStore';
+import { useInstitutionsIndex } from '../lib/institutionClientIndex';
+import InstitutionLogo from './InstitutionLogo';
 
 interface Props {
-  institutions: PublicInstitution[];
+  initialInstitutions: PublicInstitutionSummary[];
 }
 
 const PRESETS: Array<{ label: string; slugs: string[] }> = [
   {
     label: 'Universities vs National Polytechnic',
-    slugs: ['university-of-nairobi', 'strathmore-university', 'the-nairobi-national-polytechnic'],
+    slugs: ['moi-university', 'technical-university-of-kenya', 'the-eldoret-national-polytechnic'],
   },
   {
-    label: 'STEM & Engineering Leaders',
-    slugs: ['jkuat-juja', 'dedan-kimathi-university-of-technology', 'technical-university-of-kenya'],
+    label: 'National Polytechnic Benchmark',
+    slugs: ['sigalagala-national-polytechnic', 'the-kisumu-national-polytechnic', 'the-eldoret-national-polytechnic'],
   },
   {
-    label: 'Clinical & Health Network',
-    slugs: ['kmtc-nairobi-main', 'aga-khan-university-kenya', 'mount-kenya-university'],
+    label: 'STEM & Tech Universities',
+    slugs: [
+      'jomo-kenyatta-university-of-agriculture-and-technology',
+      'dedan-kimathi-university-of-technology',
+      'technical-university-of-kenya',
+    ],
   },
   {
-    label: 'Coastal & Lake Basin Regional',
-    slugs: ['pwani-university', 'kenya-coast-national-polytechnic', 'maseno-university', 'kmtc-kisumu-campus'],
+    label: 'Regional & Coastal Balance',
+    slugs: ['pwani-university', 'the-kenya-coast-national-polytechnic', 'maseno-university', 'university-of-embu'],
   },
 ];
 
-export default function ComparisonWorkbench({ institutions }: Props) {
+export default function ComparisonWorkbench({ initialInstitutions }: Props) {
+  const { institutions, isLoadingFull } = useInstitutionsIndex(initialInstitutions);
+
   const [selectedSlugs, setSelectedSlugs] = useState<string[]>(DEFAULT_COMPARE_SLUGS);
   const [radarMode, setRadarMode] = useState<'overlay' | 'split'>('overlay');
   const [enrollmentScale, setEnrollmentScale] = useState<'linear' | 'log'>('linear');
   const [activeAxis, setActiveAxis] = useState<PublicRadarAxisKey>('curriculum_depth');
   const [addSlug, setAddSlug] = useState<string>('');
+  const [selectorFilter, setSelectorFilter] = useState<string>('');
 
   useEffect(() => {
     const initial = readComparedSlugs();
@@ -82,14 +92,24 @@ export default function ComparisonWorkbench({ institutions }: Props) {
     () =>
       selectedSlugs
         .map((s) => institutions.find((i) => i.slug === s))
-        .filter((i): i is PublicInstitution => Boolean(i)),
+        .filter((i): i is PublicInstitutionSummary => Boolean(i)),
     [selectedSlugs, institutions]
   );
 
-  const availableToAdd = useMemo(
-    () => institutions.filter((i) => !selectedSlugs.includes(i.slug)),
-    [institutions, selectedSlugs]
-  );
+  const availableToAdd = useMemo(() => {
+    const q = selectorFilter.trim().toLowerCase();
+    return institutions
+      .filter((i) => !selectedSlugs.includes(i.slug))
+      .filter((i) => {
+        if (!q) return true;
+        return (
+          i.name.toLowerCase().includes(q) ||
+          i.county.toLowerCase().includes(q) ||
+          formatTypeLabel(i.type).toLowerCase().includes(q)
+        );
+      })
+      .slice(0, 150);
+  }, [institutions, selectedSlugs, selectorFilter]);
 
   const scoreMap = useMemo(() => {
     const map = new Map<string, Record<PublicRadarAxisKey, number>>();
@@ -102,7 +122,6 @@ export default function ComparisonWorkbench({ institutions }: Props) {
   const activeAxisMeta =
     PUBLIC_RADAR_AXES.find((a) => a.key === activeAxis) ?? PUBLIC_RADAR_AXES[0];
 
-  // Overlay SVG Radar math
   const svgSize = 380;
   const cx = svgSize / 2;
   const cy = svgSize / 2;
@@ -135,6 +154,7 @@ export default function ComparisonWorkbench({ institutions }: Props) {
           <div>
             <p className="font-mono text-[11px] uppercase tracking-widest text-muted">
               Active Comparison Set ({selectedInstitutions.length} / 4)
+              {isLoadingFull ? ' · Syncing registry...' : ''}
             </p>
             <h2 className="font-serif text-xl font-semibold text-ink mt-0.5">
               Select Institutions to Benchmark
@@ -142,6 +162,14 @@ export default function ComparisonWorkbench({ institutions }: Props) {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="search"
+              aria-label="Filter institution selector"
+              value={selectorFilter}
+              onChange={(e) => setSelectorFilter(e.target.value)}
+              placeholder="Filter dropdown..."
+              className="px-2.5 py-2 text-xs bg-paper border border-hairline text-ink placeholder:text-muted/75 focus:outline-none focus:border-forest w-36 sm:w-44"
+            />
             <label htmlFor="add-inst-select" className="sr-only">
               Add institution to comparison
             </label>
@@ -161,11 +189,11 @@ export default function ComparisonWorkbench({ institutions }: Props) {
               <option value="">
                 {selectedInstitutions.length >= 4
                   ? 'Maximum 4 institutions selected'
-                  : '+ Add Kenyan institution...'}
+                  : `+ Add Kenyan institution (${availableToAdd.length})...`}
               </option>
               {availableToAdd.map((inst) => (
                 <option key={inst.slug} value={inst.slug}>
-                  {inst.name} ({formatTypeLabel(inst.type)})
+                  {inst.name} ({formatTypeLabel(inst.type)} · {inst.county})
                 </option>
               ))}
             </select>
@@ -179,12 +207,18 @@ export default function ComparisonWorkbench({ institutions }: Props) {
             return (
               <div
                 key={inst.slug}
-                className="bg-paper border border-hairline p-3.5 flex items-start justify-between gap-2"
+                className="bg-paper border border-hairline p-3.5 flex items-start justify-between gap-2.5"
               >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
+                <InstitutionLogo
+                  name={inst.name}
+                  logoUrl={inst.logo_url}
+                  type={inst.type}
+                  size="sm"
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
                     <span
-                      className="inline-block w-3 h-3 shrink-0"
+                      className="inline-block w-2.5 h-2.5 shrink-0"
                       style={{ backgroundColor: palette.hex }}
                       aria-hidden="true"
                     />
@@ -194,12 +228,12 @@ export default function ComparisonWorkbench({ institutions }: Props) {
                   </div>
                   <a
                     href={`/institutions/${inst.slug}`}
-                    className="block font-serif text-sm font-semibold text-ink hover:text-forest hover:underline mt-1 truncate"
+                    className="block font-serif text-sm font-semibold text-ink hover:text-forest hover:underline mt-0.5 truncate"
                     title={inst.name}
                   >
                     {inst.name}
                   </a>
-                  <p className="font-mono text-[11px] text-muted mt-0.5">
+                  <p className="font-mono text-[11px] text-muted mt-0.5 truncate">
                     {formatTypeLabel(inst.type)} · {inst.county}
                   </p>
                 </div>
@@ -401,7 +435,6 @@ export default function ComparisonWorkbench({ institutions }: Props) {
                   </p>
                 </div>
               ) : (
-                /* Side-by-Side Small Multiples */
                 <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {selectedInstitutions.map((inst, sIdx) => {
                     const palette = SERIES_PALETTE[sIdx % SERIES_PALETTE.length];
@@ -421,7 +454,7 @@ export default function ComparisonWorkbench({ institutions }: Props) {
                       >
                         <div className="w-full flex items-center justify-between gap-2 pb-2 border-b border-hairline/70">
                           <span className="font-serif text-sm font-semibold text-ink truncate">
-                            {inst.aliases[0] ?? inst.name}
+                            {inst.name}
                           </span>
                           <span
                             className="w-2.5 h-2.5 shrink-0"
@@ -501,7 +534,6 @@ export default function ComparisonWorkbench({ institutions }: Props) {
                 </p>
               </div>
 
-              {/* Axis Tabs */}
               <div className="grid grid-cols-3 gap-1.5">
                 {PUBLIC_RADAR_AXES.map((axis) => (
                   <button
@@ -519,7 +551,6 @@ export default function ComparisonWorkbench({ institutions }: Props) {
                 ))}
               </div>
 
-              {/* Per-Institution Bars for Selected Axis */}
               <div className="space-y-3 pt-1">
                 {selectedInstitutions.map((inst, idx) => {
                   const palette = SERIES_PALETTE[idx % SERIES_PALETTE.length];
@@ -545,7 +576,6 @@ export default function ComparisonWorkbench({ institutions }: Props) {
                 })}
               </div>
 
-              {/* Overall Composite Mean */}
               <div className="pt-4 border-t border-hairline">
                 <p className="font-mono text-[10px] uppercase tracking-widest text-muted mb-2">
                   All-Axis Summary Matrix
@@ -561,7 +591,7 @@ export default function ComparisonWorkbench({ institutions }: Props) {
                               className="inline-block w-2 h-2 mr-1"
                               style={{ backgroundColor: SERIES_PALETTE[idx % 4].hex }}
                             />
-                            {inst.aliases[0] ?? inst.slug.slice(0, 6)}
+                            {inst.name.split(' ').slice(0, 2).join(' ')}
                           </th>
                         ))}
                       </tr>
@@ -657,32 +687,31 @@ export default function ComparisonWorkbench({ institutions }: Props) {
                 })}
               </div>
 
-              {/* E-Learning Programs Count */}
+              {/* Catalogued Courses */}
               <div className="space-y-3">
                 <h4 className="font-mono text-xs uppercase tracking-wider text-muted">
-                  Active E-Learning Programs
+                  Catalogued Accredited Courses
                 </h4>
                 {(() => {
-                  const maxProg = Math.max(
+                  const maxCourses = Math.max(
                     1,
-                    ...selectedInstitutions.map((i) => i.has_elearning?.[0]?.program_count ?? 0)
+                    ...selectedInstitutions.map((i) => i.course_count)
                   );
                   return selectedInstitutions.map((inst, idx) => {
                     const palette = SERIES_PALETTE[idx % SERIES_PALETTE.length];
-                    const count = inst.has_elearning?.[0]?.program_count ?? 0;
-                    const pct = (count / maxProg) * 100;
+                    const pct = (inst.course_count / maxCourses) * 100;
                     return (
                       <div key={inst.slug} className="space-y-1">
                         <div className="flex justify-between text-xs">
                           <span className="font-medium text-ink truncate pr-2">{inst.name}</span>
                           <span className="font-mono font-semibold tabular-nums text-ink">
-                            {count} programs
+                            {inst.course_count} courses
                           </span>
                         </div>
                         <div className="h-3 bg-limestone overflow-hidden">
                           <div
                             className="h-full transition-all duration-300"
-                            style={{ width: `${count > 0 ? Math.max(6, pct) : 0}%`, backgroundColor: palette.hex }}
+                            style={{ width: `${inst.course_count > 0 ? Math.max(6, pct) : 0}%`, backgroundColor: palette.hex }}
                           />
                         </div>
                       </div>
@@ -691,7 +720,7 @@ export default function ComparisonWorkbench({ institutions }: Props) {
                 })()}
               </div>
 
-              {/* Campuses & Accreditations */}
+              {/* Campuses & Regional Centres */}
               <div className="space-y-3">
                 <h4 className="font-mono text-xs uppercase tracking-wider text-muted">
                   Campuses &amp; Regional Centres
@@ -699,23 +728,23 @@ export default function ComparisonWorkbench({ institutions }: Props) {
                 {(() => {
                   const maxCamp = Math.max(
                     1,
-                    ...selectedInstitutions.map((i) => i.campuses.length)
+                    ...selectedInstitutions.map((i) => i.campus_count)
                   );
                   return selectedInstitutions.map((inst, idx) => {
                     const palette = SERIES_PALETTE[idx % SERIES_PALETTE.length];
-                    const pct = (inst.campuses.length / maxCamp) * 100;
+                    const pct = (inst.campus_count / maxCamp) * 100;
                     return (
                       <div key={inst.slug} className="space-y-1">
                         <div className="flex justify-between text-xs">
                           <span className="font-medium text-ink truncate pr-2">{inst.name}</span>
                           <span className="font-mono font-semibold tabular-nums text-ink">
-                            {inst.campuses.length} campuses
+                            {inst.campus_count} campuses
                           </span>
                         </div>
                         <div className="h-3 bg-limestone overflow-hidden">
                           <div
                             className="h-full transition-all duration-300"
-                            style={{ width: `${pct}%`, backgroundColor: palette.hex }}
+                            style={{ width: `${Math.max(8, pct)}%`, backgroundColor: palette.hex }}
                           />
                         </div>
                       </div>
@@ -732,23 +761,23 @@ export default function ComparisonWorkbench({ institutions }: Props) {
                 {(() => {
                   const maxFac = Math.max(
                     1,
-                    ...selectedInstitutions.map((i) => i.facilities.length)
+                    ...selectedInstitutions.map((i) => i.facility_count)
                   );
                   return selectedInstitutions.map((inst, idx) => {
                     const palette = SERIES_PALETTE[idx % SERIES_PALETTE.length];
-                    const pct = (inst.facilities.length / maxFac) * 100;
+                    const pct = (inst.facility_count / maxFac) * 100;
                     return (
                       <div key={inst.slug} className="space-y-1">
                         <div className="flex justify-between text-xs">
                           <span className="font-medium text-ink truncate pr-2">{inst.name}</span>
                           <span className="font-mono font-semibold tabular-nums text-ink">
-                            {inst.facilities.length} facilities
+                            {inst.facility_count} facilities
                           </span>
                         </div>
                         <div className="h-3 bg-limestone overflow-hidden">
                           <div
                             className="h-full transition-all duration-300"
-                            style={{ width: `${pct}%`, backgroundColor: palette.hex }}
+                            style={{ width: `${inst.facility_count > 0 ? Math.max(8, pct) : 0}%`, backgroundColor: palette.hex }}
                           />
                         </div>
                       </div>
@@ -829,47 +858,45 @@ export default function ComparisonWorkbench({ institutions }: Props) {
                   ))}
                 </tr>
                 <tr>
-                  <td className="py-3 px-4 font-medium text-muted">Founded / Charter</td>
+                  <td className="py-3 px-4 font-medium text-muted">Google Maps</td>
                   {selectedInstitutions.map((inst) => (
-                    <td key={inst.slug} className="py-3 px-4 font-mono tabular-nums text-ink">
-                      {inst.founded_year ?? '—'}
-                      {inst.charter_year ? ` / Chartered ${inst.charter_year}` : ''}
+                    <td key={inst.slug} className="py-3 px-4 font-mono text-xs">
+                      <a
+                        href={inst.google_maps_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-lapis hover:underline"
+                      >
+                        Open Location
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
                     </td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="py-3 px-4 font-medium text-muted">Faculty Ratio</td>
+                  <td className="py-3 px-4 font-medium text-muted">Schologic LMS Portal</td>
                   {selectedInstitutions.map((inst) => (
-                    <td key={inst.slug} className="py-3 px-4 font-mono tabular-nums text-ink">
-                      {inst.faculty_student_ratio ?? '—'}
+                    <td key={inst.slug} className="py-3 px-4 font-mono text-xs">
+                      {inst.portal_subdomain ? (
+                        <a href="/login" className="text-lapis hover:underline">
+                          {inst.portal_subdomain}
+                        </a>
+                      ) : (
+                        <a href={`/start?campus=${inst.slug}`} className="text-forest hover:underline">
+                          Claim on Schologic LMS
+                        </a>
+                      )}
                     </td>
                   ))}
-                </tr>
-                <tr>
-                  <td className="py-3 px-4 font-medium text-muted">Campus Portal</td>
-                  {selectedInstitutions.map((inst) => {
-                    const host = inst.custom_portal_domain ?? inst.portal_subdomain;
-                    return (
-                      <td key={inst.slug} className="py-3 px-4 font-mono text-xs">
-                        {host ? (
-                          <a href="/login" className="text-lapis hover:underline">
-                            {host}
-                          </a>
-                        ) : (
-                          <span className="text-muted">Claimable (*.schologic.org)</span>
-                        )}
-                      </td>
-                    );
-                  })}
                 </tr>
                 <tr>
                   <td className="py-3 px-4 font-medium text-muted">E-Learning / ODeL</td>
                   {selectedInstitutions.map((inst) => (
                     <td key={inst.slug} className="py-3 px-4 text-xs">
-                      {inst.has_elearning?.[0]?.enabled ? (
-                        <span className="inline-flex items-center gap-1 text-forest font-medium">
+                      {inst.elearning_status !== 'none' ? (
+                        <span className="inline-flex items-center gap-1 text-forest font-medium capitalize">
                           <CheckCircle2 className="w-3.5 h-3.5" />
-                          {inst.has_elearning[0].platform ?? 'Active'}
+                          {inst.elearning_status} E-Learning
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-muted">
@@ -883,24 +910,24 @@ export default function ComparisonWorkbench({ institutions }: Props) {
                   <td className="py-3 px-4 font-medium text-muted">Teaching Practicum</td>
                   {selectedInstitutions.map((inst) => (
                     <td key={inst.slug} className="py-3 px-4 text-xs">
-                      {inst.has_teaching_courses?.[0]?.enabled ? (
+                      {inst.teaching_enabled ? (
                         <span className="inline-flex items-center gap-1 text-forest font-medium">
                           <CheckCircle2 className="w-3.5 h-3.5" />
-                          {inst.has_teaching_courses[0].program_count ?? 1}+ tracks
+                          Enabled
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-muted">
-                          <Minus className="w-3.5 h-3.5" /> None
+                          <Minus className="w-3.5 h-3.5" /> None indexed
                         </span>
                       )}
                     </td>
                   ))}
                 </tr>
                 <tr>
-                  <td className="py-3 px-4 font-medium text-muted">Flagship Disciplines</td>
+                  <td className="py-3 px-4 font-medium text-muted">Key Disciplines</td>
                   {selectedInstitutions.map((inst) => (
                     <td key={inst.slug} className="py-3 px-4 text-xs text-ink leading-relaxed">
-                      {inst.flagship_disciplines.join(' · ')}
+                      {inst.disciplines.length > 0 ? inst.disciplines.join(' · ') : 'General TVET / Academic'}
                     </td>
                   ))}
                 </tr>

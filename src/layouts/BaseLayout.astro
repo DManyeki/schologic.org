@@ -1,26 +1,35 @@
 ---
 import '../index.css';
 import AIChatDrawer from '../components/AIChatDrawer';
-import { PUBLIC_INSTITUTIONS } from '../data/publicInstitutions';
+import { CURATED_INSTITUTION_SUMMARIES } from '../data/publicInstitutions';
 
 export interface Props {
   title: string;
   description?: string;
-  activeNav?: 'directory' | 'compare' | 'counties' | 'educators' | 'contact' | 'login' | 'oer' | 'start';
+  activeNav?:
+    | 'index'
+    | 'directory'
+    | 'compare'
+    | 'counties'
+    | 'educators'
+    | 'contact'
+    | 'login'
+    | 'oer'
+    | 'start';
 }
 
 const {
   title,
-  description = 'Credible, flexible, intelligent learning for African universities and colleges. Public Kenyan Educational Institutions Index, Interactive County Map, and Comparison Studio on schologic.org.',
-  activeNav = 'directory',
+  description = 'Public Kenyan Educational Institutions Index, Interactive 47-County Map, Multi-Criteria Ranking Studio, and Schologic LMS Campus Router on schologic.org.',
+  activeNav = 'index',
 } = Astro.props;
 
 const navLinks = [
-  { id: 'directory', label: 'Directory', href: '/' },
+  { id: 'index', label: 'Map & Rankings', href: '/' },
+  { id: 'directory', label: 'Directory', href: '/directory' },
   { id: 'compare', label: 'Compare', href: '/compare' },
   { id: 'counties', label: 'Counties', href: '/counties' },
   { id: 'educators', label: 'Educators', href: '/for-educators' },
-  { id: 'contact', label: 'Contact', href: '/contact' },
 ] as const;
 ---
 
@@ -49,7 +58,7 @@ const navLinks = [
   <body class="min-h-screen bg-paper text-ink antialiased flex flex-col selection:bg-forest/15 selection:text-forest">
     <header class="sticky top-0 z-40 bg-paper/95 backdrop-blur-sm border-b border-hairline">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-6">
-        <!-- Zone 1: Brand Lockup with Official Schologic Logo -->
+        <!-- Zone 1: Brand Lockup -->
         <a
           href="/"
           class="flex items-center gap-2.5 whitespace-nowrap shrink-0 group focus:outline-none"
@@ -69,7 +78,7 @@ const navLinks = [
           </span>
         </a>
 
-        <!-- Zone 2: Primary Navigation -->
+        <!-- Zone 2: Primary Navigation (5 concise links, single-line) -->
         <nav aria-label="Primary" class="hidden md:flex items-center gap-6">
           {navLinks.map((link) => {
             const isActive = activeNav === link.id;
@@ -90,7 +99,7 @@ const navLinks = [
           })}
         </nav>
 
-        <!-- Zone 3: Login CTA + Mobile Toggle -->
+        <!-- Zone 3: Schologic LMS Login CTA + Mobile Toggle -->
         <div class="flex items-center gap-3 shrink-0">
           <a
             href="/login"
@@ -140,8 +149,11 @@ const navLinks = [
           <a href="/oer" class="px-2 py-2 text-sm font-medium text-ink border-b border-hairline/60">
             OER Library &amp; Reader
           </a>
+          <a href="/contact" class="px-2 py-2 text-sm font-medium text-ink border-b border-hairline/60">
+            Contact &amp; Registry Desk
+          </a>
           <a href="/start" class="px-2 py-2 text-sm font-medium text-forest font-semibold">
-            Free-Tier Campus Setup
+            Free-Tier Schologic LMS Setup
           </a>
         </nav>
       </div>
@@ -169,9 +181,9 @@ const navLinks = [
               </span>
             </div>
             <p class="mt-3 text-sm text-muted leading-relaxed max-w-md">
-              Credible, flexible, intelligent learning for African universities and colleges. One
-              system for the work behind learning—open Kenyan institution discovery, OER
-              textbooks, and practitioner workspaces.
+              Credible, flexible, intelligent learning for African universities and colleges. Open
+              Kenyan institution discovery, Google Maps navigation, OER textbooks, and Schologic LMS
+              campuses.
             </p>
             <p class="mt-3 font-mono text-[11px] text-muted">
               Cookieless Analytics · Zero Personal PII · Kenya Data Protection Act (2019)
@@ -185,7 +197,12 @@ const navLinks = [
             <ul class="space-y-2 text-sm">
               <li>
                 <a href="/" class="text-ink hover:text-forest transition-colors">
-                  Kenyan Institutions Index
+                  Interactive Map &amp; Rankings
+                </a>
+              </li>
+              <li>
+                <a href="/directory" class="text-ink hover:text-forest transition-colors">
+                  Full Institution Directory
                 </a>
               </li>
               <li>
@@ -195,7 +212,7 @@ const navLinks = [
               </li>
               <li>
                 <a href="/counties" class="text-ink hover:text-forest transition-colors">
-                  47-County Geographic Map
+                  47-County Geographic Ledger
                 </a>
               </li>
               <li>
@@ -213,17 +230,17 @@ const navLinks = [
 
           <div class="md:col-span-4">
             <h3 class="font-mono text-[11px] uppercase tracking-widest text-muted mb-3">
-              Access &amp; Ecosystem
+              Schologic LMS &amp; Ecosystem
             </h3>
             <ul class="space-y-2 text-sm">
               <li>
                 <a href="/login" class="text-ink font-semibold hover:text-forest transition-colors">
-                  Sign In / Account Login
+                  Sign In to Schologic LMS
                 </a>
               </li>
               <li>
                 <a href="/start" class="text-ink hover:text-forest transition-colors">
-                  Free-Tier Instructor Onboarding
+                  Free-Tier Schologic LMS Onboarding
                 </a>
               </li>
               <li>
@@ -248,7 +265,7 @@ const navLinks = [
                   rel="noopener noreferrer"
                   class="text-ink hover:text-forest transition-colors"
                 >
-                  Live Evaluator Sandbox (demo.schologic.study)
+                  Live Schologic LMS Sandbox (demo.schologic.study)
                 </a>
               </li>
             </ul>
@@ -267,7 +284,7 @@ const navLinks = [
       </div>
     </footer>
 
-    <AIChatDrawer institutions={PUBLIC_INSTITUTIONS} client:load />
+    <AIChatDrawer initialInstitutions={CURATED_INSTITUTION_SUMMARIES} client:load />
 
     <script is:inline>
       const toggleBtn = document.getElementById('mobile-menu-toggle');

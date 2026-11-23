@@ -1,13 +1,23 @@
 export type InstitutionType = 'university' | 'tvet' | 'kmtc';
 export type TvetCategory = 'NP' | 'TVC' | 'VTC';
 export type OwnershipType = 'public' | 'private';
+export type ModalityStatus = 'verified' | 'implied' | 'none';
+export type VerificationStatus = 'verified' | 'flagged' | 'unverified';
 
 export interface CourseItem {
   code: string;
   title: string;
-  level: 'Doctorate' | 'Masters' | 'Bachelors' | 'Higher Diploma' | 'Diploma' | 'Certificate' | 'Artisan';
+  level:
+    | 'Doctorate'
+    | 'Masters'
+    | 'Bachelors'
+    | 'Higher Diploma'
+    | 'Diploma'
+    | 'Certificate'
+    | 'Artisan';
   duration: string;
   modality: 'Full-Time' | 'E-Learning' | 'Distance' | 'Evening / Weekend';
+  exam_body?: string;
 }
 
 export interface CampusItem {
@@ -15,13 +25,6 @@ export interface CampusItem {
   town: string;
   county: string;
   is_main: boolean;
-}
-
-export interface ModalityRecord {
-  enabled: boolean;
-  platform?: string;
-  program_count?: number;
-  notes?: string;
 }
 
 export interface AffiliationItem {
@@ -39,6 +42,15 @@ export interface PublicGeoPoint {
   lat: number;
   lng: number;
   place_name: string;
+}
+
+export interface RankingScores {
+  registry_standing: number;
+  curriculum_depth: number;
+  digital_readiness: number;
+  facilities_footprint: number;
+  practicum_alignment: number;
+  composite: number;
 }
 
 /**
@@ -62,10 +74,15 @@ export interface PublicInstitution {
   town: string;
   location: string;
   geo: PublicGeoPoint | null;
+  map_x: number;
+  map_y: number;
+  has_exact_geo: boolean;
+  google_maps_url: string;
+  has_verified_maps_url: boolean;
   website: string | null;
   email: string | null;
   phone: string | null;
-  cover_image_url: string;
+  logo_url: string | null;
   description: string;
   about: string;
   founded_year: number | null;
@@ -76,15 +93,61 @@ export interface PublicInstitution {
   facilities: string[];
   accreditations: string[];
   courses: CourseItem[];
+  total_courses_count: number;
   campuses: CampusItem[];
   affiliation: AffiliationItem[];
-  has_elearning: ModalityRecord[];
-  has_distance_learning: ModalityRecord[];
-  has_teaching_courses: ModalityRecord[];
+  elearning_status: ModalityStatus;
+  elearning_notes: string;
+  distance_status: ModalityStatus;
+  distance_notes: string;
+  teaching_enabled: boolean;
+  teaching_notes: string;
   social_media: SocialMediaLink[];
   is_verified: boolean;
-  parent_institution_slug: string | null;
-  parent_institution_name: string | null;
+  verification_status: VerificationStatus;
+  research_score: number;
+  health_score: number;
+  ranking_scores: RankingScores;
+}
+
+/**
+ * Compact client-side index record served from /data/institutions-index.json
+ */
+export interface PublicInstitutionSummary {
+  id: string;
+  slug: string;
+  name: string;
+  type: InstitutionType;
+  category: TvetCategory | null;
+  ownership: OwnershipType;
+  county: string;
+  region: string;
+  town: string;
+  location: string;
+  logo_url: string | null;
+  website: string | null;
+  portal_subdomain: string | null;
+  google_maps_url: string;
+  has_verified_maps_url: boolean;
+  map_x: number;
+  map_y: number;
+  has_exact_geo: boolean;
+  registration_number: string | null;
+  estimated_student_count: number;
+  course_count: number;
+  facility_count: number;
+  accreditation_count: number;
+  campus_count: number;
+  elearning_status: ModalityStatus;
+  distance_status: ModalityStatus;
+  teaching_enabled: boolean;
+  is_verified: boolean;
+  verification_status: VerificationStatus;
+  research_score: number;
+  health_score: number;
+  ranking_scores: RankingScores;
+  description: string;
+  disciplines: string[];
 }
 
 export type PublicRadarAxisKey =
@@ -107,37 +170,43 @@ export const PUBLIC_RADAR_AXES: PublicRadarAxisMeta[] = [
     key: 'curriculum_depth',
     label: 'Program & Course Depth',
     shortLabel: 'Programs',
-    description: 'Diversity of catalogued qualifications across degree, higher diploma, diploma, and certificate tracks.',
+    description:
+      'Diversity of catalogued qualifications across degree, higher diploma, diploma, certificate, and artisan tracks.',
   },
   {
     key: 'digital_learning',
     label: 'Digital & ODeL Readiness',
     shortLabel: 'Digital',
-    description: 'Active e-learning platforms, distance-learning centres, and virtual course availability.',
+    description:
+      'Verified or implied e-learning platforms, distance-learning centres, official web presence, and Schologic LMS portals.',
   },
   {
     key: 'practicum_readiness',
     label: 'Practicum & Clinical Focus',
     shortLabel: 'Practicum',
-    description: 'Strength of teaching practice, hospital clinical rotations, or technical workshop attachments.',
+    description:
+      'Strength of teaching practice, KMTC hospital clinical rotations, or CBET/NITA technical attachments.',
   },
   {
     key: 'campus_facilities',
     label: 'Facilities & Labs',
     shortLabel: 'Facilities',
-    description: 'Indexed libraries, research centres, specialized laboratories, and practical studios.',
+    description:
+      'Indexed libraries, research centres, specialized laboratories, and practical engineering workshops.',
   },
   {
     key: 'regional_footprint',
     label: 'Campus Footprint',
     shortLabel: 'Campuses',
-    description: 'Multi-campus presence, county coverage, and hybrid delivery reach across Kenya.',
+    description:
+      'Multi-campus network reach, distance delivery coverage, and institutional affiliations across Kenya.',
   },
   {
     key: 'registry_standing',
     label: 'Accreditation Standing',
     shortLabel: 'Accredited',
-    description: 'Verified registration with CUE, TVETA, Ministry of Health, and professional statutory boards.',
+    description:
+      'Verified registration with CUE, TVETA, Ministry of Health, and overall registry completeness.',
   },
 ];
 
@@ -168,40 +237,21 @@ export const SERIES_PALETTE = [
   },
 ] as const;
 
-export function getPublicRadarScores(inst: PublicInstitution): Record<PublicRadarAxisKey, number> {
-  const levels = new Set(inst.courses.map((c) => c.level));
-  const curriculum_depth = Math.min(100, 42 + inst.courses.length * 10 + levels.size * 6);
-
-  const hasE = inst.has_elearning?.[0]?.enabled ? 38 : 0;
-  const eCount = Math.min(34, (inst.has_elearning?.[0]?.program_count ?? 0) * 0.6);
-  const hasD = inst.has_distance_learning?.[0]?.enabled ? 22 : 0;
-  const digital_learning = Math.min(100, Math.round(20 + hasE + eCount + hasD));
-
-  const hasTeaching = inst.has_teaching_courses?.[0]?.enabled ? 28 : 0;
-  const typePracticumBonus = inst.type === 'kmtc' ? 42 : inst.type === 'tvet' ? 36 : 18;
-  const facilityPracticum = Math.min(26, inst.facilities.length * 5);
-  const practicum_readiness = Math.min(100, 14 + hasTeaching + typePracticumBonus + facilityPracticum);
-
-  const campus_facilities = Math.min(100, 38 + inst.facilities.length * 11);
-
-  const uniqueCounties = new Set(inst.campuses.map((c) => c.county)).size;
-  const regional_footprint = Math.min(
-    100,
-    30 + inst.campuses.length * 11 + uniqueCounties * 8 + (inst.has_distance_learning?.[0]?.enabled ? 12 : 0)
-  );
-
-  const registry_standing = Math.min(
-    100,
-    (inst.is_verified ? 52 : 25) + inst.accreditations.length * 11 + (inst.registration_number ? 8 : 0)
-  );
+export function getPublicRadarScores(
+  inst: PublicInstitution | PublicInstitutionSummary
+): Record<PublicRadarAxisKey, number> {
+  const rs = inst.ranking_scores;
+  const campusCount = 'campuses' in inst ? inst.campuses.length : inst.campus_count;
+  const distBonus = inst.distance_status === 'verified' ? 24 : inst.distance_status === 'implied' ? 12 : 0;
+  const regional_footprint = Math.min(100, 26 + campusCount * 14 + distBonus);
 
   return {
-    curriculum_depth,
-    digital_learning,
-    practicum_readiness,
-    campus_facilities,
+    curriculum_depth: rs.curriculum_depth,
+    digital_learning: rs.digital_readiness,
+    practicum_readiness: rs.practicum_alignment,
+    campus_facilities: rs.facilities_footprint,
     regional_footprint,
-    registry_standing,
+    registry_standing: rs.registry_standing,
   };
 }
 
@@ -225,7 +275,7 @@ export function formatCategoryLabel(category: TvetCategory | null): string {
     case 'VTC':
       return 'Vocational Training Center (VTC)';
     default:
-      return 'Chartered Institution';
+      return 'Chartered / Statutory Institution';
   }
 }
 

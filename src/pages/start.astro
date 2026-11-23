@@ -1,26 +1,26 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import FreeTierOnboarding from '../components/FreeTierOnboarding';
-import { PUBLIC_INSTITUTIONS } from '../data/publicInstitutions';
+import { CURATED_INSTITUTION_SUMMARIES } from '../data/publicInstitutions';
 ---
 
 <BaseLayout
-  title="Free-Tier Campus Onboarding (*.schologic.org) | schologic.org"
-  description="Activate a free-tier Class Manager, OER Library, AI Assistant, and Practicum Manager workspace on yourcampus.schologic.org."
+  title="Free-Tier Schologic LMS Onboarding (*.schologic.org) | schologic.org"
+  description="Activate a free-tier Class Manager, OER Library, AI Assistant, and Practicum Manager workspace on Schologic LMS."
   activeNav="start"
 >
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
     <header class="border-b border-hairline pb-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-end">
       <div class="lg:col-span-8">
         <p class="font-mono text-[11px] uppercase tracking-widest text-forest font-semibold">
-          Bottom-Up Practitioner Onboarding
+          Bottom-Up Schologic LMS Onboarding
         </p>
         <h1 class="font-serif text-3xl sm:text-4xl font-semibold text-ink mt-1.5 text-balance">
-          Activate a Free <code class="font-mono text-forest">*.schologic.org</code> Campus Workspace
+          Activate a Free <code class="font-mono text-forest">*.schologic.org</code> Schologic LMS Portal
         </h1>
         <p class="mt-2 text-sm sm:text-base text-muted max-w-2xl leading-relaxed">
           Individual lecturers, TVET trainers, and clinical/teaching practicum coordinators can
-          start immediately without procurement delays. One system for the work behind learning.
+          start immediately on Schologic LMS without procurement delays.
         </p>
       </div>
 
@@ -53,12 +53,12 @@ import { PUBLIC_INSTITUTIONS } from '../data/publicInstitutions';
 
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
       <div class="lg:col-span-8">
-        <FreeTierOnboarding institutions={PUBLIC_INSTITUTIONS} client:load />
+        <FreeTierOnboarding initialInstitutions={CURATED_INSTITUTION_SUMMARIES} client:load />
       </div>
 
       <aside class="lg:col-span-4 border border-hairline bg-limestone/40 p-6 space-y-4 text-xs">
         <p class="font-mono uppercase tracking-widest text-muted">
-          Included on Every Free Subdomain
+          Included on Schologic LMS Free Tier
         </p>
         <ul class="space-y-3 text-ink leading-relaxed">
           <li>

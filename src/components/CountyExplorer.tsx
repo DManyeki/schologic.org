@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Search, ArrowUpRight, MapPin } from 'lucide-react';
-import { type PublicInstitution, slugifyCounty } from '../types/institution';
+import { type PublicInstitutionSummary, slugifyCounty } from '../types/institution';
+import { useInstitutionsIndex } from '../lib/institutionClientIndex';
 import KenyaInteractiveMap from './KenyaInteractiveMap';
 
 interface CountyEntry {
@@ -10,16 +11,18 @@ interface CountyEntry {
 
 interface Props {
   allCounties: CountyEntry[];
-  institutions: PublicInstitution[];
+  initialInstitutions: PublicInstitutionSummary[];
 }
 
-export default function CountyExplorer({ allCounties, institutions }: Props) {
+export default function CountyExplorer({ allCounties, initialInstitutions }: Props) {
+  const { institutions } = useInstitutionsIndex(initialInstitutions);
+
   const [query, setQuery] = useState('');
   const [regionFilter, setRegionFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'indexed' | 'queued'>('all');
 
   const countyMap = useMemo(() => {
-    const map = new Map<string, PublicInstitution[]>();
+    const map = new Map<string, PublicInstitutionSummary[]>();
     for (const inst of institutions) {
       const list = map.get(inst.county) ?? [];
       list.push(inst);
@@ -50,7 +53,7 @@ export default function CountyExplorer({ allCounties, institutions }: Props) {
     }
     return Array.from(totals.entries())
       .map(([region, stats]) => ({ region, ...stats }))
-      .sort((a, b) => b.enrollment - a.enrollment);
+      .sort((a, b) => b.indexed - a.indexed);
   }, [allCounties, countyMap]);
 
   const filteredCounties = useMemo(() => {
@@ -69,12 +72,15 @@ export default function CountyExplorer({ allCounties, institutions }: Props) {
     });
   }, [allCounties, countyMap, query, regionFilter, statusFilter]);
 
-  const maxRegionEnrollment = Math.max(1, ...regionStats.map((r) => r.enrollment));
+  const maxRegionIndexed = Math.max(1, ...regionStats.map((r) => r.indexed));
 
   return (
     <div className="space-y-8">
       {/* Real Geographic Kenya 47-County Map Explorer */}
-      <KenyaInteractiveMap institutions={institutions} countyRegions={countyRegionsObj} />
+      <KenyaInteractiveMap
+        initialInstitutions={initialInstitutions}
+        countyRegions={countyRegionsObj}
+      />
 
       {/* Regional Distribution Bars */}
       <section className="border border-hairline bg-paper p-5 sm:p-6">
@@ -84,7 +90,7 @@ export default function CountyExplorer({ allCounties, institutions }: Props) {
               Geographic Footprint
             </p>
             <h2 className="font-serif text-xl font-semibold text-ink">
-              8-Region Enrollment &amp; Registry Coverage
+              8-Region Institutional &amp; Registry Coverage
             </h2>
           </div>
           <span className="font-mono text-xs text-muted tabular-nums">
@@ -94,7 +100,7 @@ export default function CountyExplorer({ allCounties, institutions }: Props) {
 
         <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
           {regionStats.map((row) => {
-            const pct = (row.enrollment / maxRegionEnrollment) * 100;
+            const pct = (row.indexed / maxRegionIndexed) * 100;
             const active = regionFilter === row.region;
             return (
               <button
@@ -111,17 +117,17 @@ export default function CountyExplorer({ allCounties, institutions }: Props) {
                   <span className="font-semibold text-ink">
                     {row.region}
                     <span className="font-mono font-normal text-muted ml-2">
-                      ({row.counties} counties · {row.indexed} indexed)
+                      ({row.counties} counties)
                     </span>
                   </span>
                   <span className="font-mono font-semibold text-ink tabular-nums">
-                    {row.enrollment > 0 ? `${row.enrollment.toLocaleString()} students` : 'Queued'}
+                    {row.indexed.toLocaleString()} institutions
                   </span>
                 </div>
                 <div className="h-2 w-full bg-limestone overflow-hidden">
                   <div
                     className="h-full bg-forest transition-all duration-300"
-                    style={{ width: `${row.enrollment > 0 ? Math.max(5, pct) : 0}%` }}
+                    style={{ width: `${row.indexed > 0 ? Math.max(5, pct) : 0}%` }}
                   />
                 </div>
               </button>
@@ -184,7 +190,7 @@ export default function CountyExplorer({ allCounties, institutions }: Props) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredCounties.map((entry) => {
           const insts = countyMap.get(entry.county) ?? [];
-          const enrollment = insts.reduce((sum, i) => sum + i.estimated_student_count, 0);
+          const verifiedCount = insts.filter((i) => i.is_verified).length;
           const countySlug = slugifyCounty(entry.county);
           const isIndexed = insts.length > 0;
 
@@ -201,7 +207,7 @@ export default function CountyExplorer({ allCounties, institutions }: Props) {
                 <div className="flex items-center justify-between gap-2 font-mono text-[11px] text-muted">
                   <span>{entry.region}</span>
                   <span className={isIndexed ? 'text-forest font-semibold' : 'text-muted'}>
-                    {isIndexed ? `${insts.length} Indexed` : 'Ingestion Queue'}
+                    {isIndexed ? `${insts.length} Indexed` : 'Verification Queued'}
                   </span>
                 </div>
 
@@ -239,14 +245,14 @@ export default function CountyExplorer({ allCounties, institutions }: Props) {
                   </ul>
                 ) : (
                   <p className="mt-2.5 text-xs text-muted leading-relaxed">
-                    TVET &amp; KMTC county registry verification queued for upcoming Neon sync.
+                    County institutional registry entries queued for upcoming public verification.
                   </p>
                 )}
               </div>
 
               <div className="mt-4 pt-3 border-t border-hairline/80 flex items-center justify-between text-xs">
                 <span className="font-mono text-muted tabular-nums">
-                  {isIndexed ? `~${enrollment.toLocaleString()} students` : 'Public registry pending'}
+                  {isIndexed ? `${verifiedCount} verified` : 'Public registry pending'}
                 </span>
                 {isIndexed && (
                   <a

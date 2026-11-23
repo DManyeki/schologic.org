@@ -11,7 +11,7 @@ export default function LoginGateway() {
   const handleCredentialsSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setStatusMessage(
-      `Sign-in request prepared for ${email}. Authentication provider and session routing will be connected in the backend integration phase.`
+      `Sign-in request prepared for ${email}. Your Schologic LMS authentication session routing connects here.`
     );
   };
 
@@ -20,7 +20,7 @@ export default function LoginGateway() {
     const cleaned = campusDomain.trim().toLowerCase().replace(/^https?:\/\//, '');
     const target = cleaned.includes('.') ? cleaned : `${cleaned}.schologic.org`;
     setStatusMessage(
-      `Campus router target resolved to ${target}. Automatic tenant redirection will be enabled once auth routing is connected.`
+      `Schologic LMS portal target resolved to ${target}. Automatic tenant redirection routes directly to your campus workspace.`
     );
   };
 
@@ -49,7 +49,7 @@ export default function LoginGateway() {
             mode === 'institution' ? 'bg-ink text-paper' : 'text-muted hover:text-ink'
           }`}
         >
-          Find Campus Workspace
+          Find Schologic LMS Portal
         </button>
       </div>
 
@@ -104,14 +104,14 @@ export default function LoginGateway() {
             className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-forest text-paper font-semibold hover:bg-ink transition-colors cursor-pointer"
           >
             <Lock className="w-4 h-4" />
-            Sign In to Schologic
+            Sign In to Schologic LMS
           </button>
         </form>
       ) : (
         <form onSubmit={handleDomainSubmit} className="space-y-4 text-sm">
           <div>
             <label htmlFor="campus-slug" className="block font-medium text-ink mb-1">
-              Institution Subdomain or Custom Domain
+              Schologic LMS Subdomain or Custom Domain
             </label>
             <input
               id="campus-slug"
@@ -119,11 +119,11 @@ export default function LoginGateway() {
               required
               value={campusDomain}
               onChange={(e) => setCampusDomain(e.target.value)}
-              placeholder="e.g. uon, kmtc, or lms.college.ac.ke"
+              placeholder="e.g. moi-university, kmtc, or lms.college.ac.ke"
               className="w-full px-3 py-2.5 border border-hairline bg-paper text-ink focus:outline-none focus:border-forest"
             />
             <p className="mt-1.5 text-xs text-muted">
-              Enter your campus identifier to route to your institutional login endpoint.
+              Enter your campus identifier to route to your Schologic LMS login endpoint.
             </p>
           </div>
 
@@ -131,7 +131,7 @@ export default function LoginGateway() {
             type="submit"
             className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-ink text-paper font-semibold hover:bg-forest transition-colors cursor-pointer"
           >
-            Continue to Campus Auth
+            Continue to Schologic LMS Auth
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
@@ -143,7 +143,7 @@ export default function LoginGateway() {
           New lecturer or practicum coordinator?
         </p>
         <p>
-          Set up a free individual workspace on{' '}
+          Set up a free Schologic LMS workspace on{' '}
           <a href="/start" className="text-forest font-semibold hover:underline">
             Free-Tier Onboarding →
           </a>{' '}

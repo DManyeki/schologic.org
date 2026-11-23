@@ -9,13 +9,16 @@ import {
   ExternalLink,
   X,
   RotateCcw,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import {
   type InstitutionType,
   type OwnershipType,
-  type PublicInstitution,
+  type PublicInstitutionSummary,
   type TvetCategory,
   formatTypeLabel,
+  slugifyCounty,
 } from '../types/institution';
 import {
   readComparedSlugs,
@@ -23,28 +26,34 @@ import {
   toggleComparedSlug,
   writeComparedSlugs,
 } from '../lib/compareStore';
+import { useInstitutionsIndex } from '../lib/institutionClientIndex';
+import InstitutionLogo from './InstitutionLogo';
 
 interface Props {
-  institutions: PublicInstitution[];
+  initialInstitutions: PublicInstitutionSummary[];
 }
 
-type SortKey = 'enrollment' | 'courses' | 'name';
+type SortKey = 'composite' | 'courses' | 'enrollment' | 'name';
+const PAGE_SIZE = 24;
 
-export default function DirectoryExplorer({ institutions }: Props) {
+export default function DirectoryExplorer({ initialInstitutions }: Props) {
+  const { institutions, isLoadingFull } = useInstitutionsIndex(initialInstitutions);
+
   const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | InstitutionType>('all');
   const [tvetCategory, setTvetCategory] = useState<'all' | TvetCategory>('all');
   const [ownershipFilter, setOwnershipFilter] = useState<'all' | OwnershipType>('all');
   const [regionFilter, setRegionFilter] = useState<string>('all');
+  const [onlyVerified, setOnlyVerified] = useState(false);
   const [onlyElearning, setOnlyElearning] = useState(false);
   const [onlyDistance, setOnlyDistance] = useState(false);
   const [onlyTeaching, setOnlyTeaching] = useState(false);
   const [onlyPortal, setOnlyPortal] = useState(false);
-  const [sortBy, setSortBy] = useState<SortKey>('enrollment');
+  const [sortBy, setSortBy] = useState<SortKey>('composite');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [page, setPage] = useState(1);
   const [pinnedSlugs, setPinnedSlugs] = useState<string[]>([]);
   const [limitNotice, setLimitNotice] = useState(false);
-  const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setPinnedSlugs(readComparedSlugs());
@@ -64,10 +73,11 @@ export default function DirectoryExplorer({ institutions }: Props) {
       }
       if (ownershipFilter !== 'all' && inst.ownership !== ownershipFilter) return false;
       if (regionFilter !== 'all' && inst.region !== regionFilter) return false;
-      if (onlyElearning && !inst.has_elearning?.[0]?.enabled) return false;
-      if (onlyDistance && !inst.has_distance_learning?.[0]?.enabled) return false;
-      if (onlyTeaching && !inst.has_teaching_courses?.[0]?.enabled) return false;
-      if (onlyPortal && !inst.portal_subdomain && !inst.custom_portal_domain) return false;
+      if (onlyVerified && !inst.is_verified) return false;
+      if (onlyElearning && inst.elearning_status === 'none') return false;
+      if (onlyDistance && inst.distance_status === 'none') return false;
+      if (onlyTeaching && !inst.teaching_enabled) return false;
+      if (onlyPortal && !inst.portal_subdomain) return false;
 
       if (!q) return true;
       const haystack = [
@@ -77,9 +87,7 @@ export default function DirectoryExplorer({ institutions }: Props) {
         inst.region,
         inst.town,
         inst.registration_number ?? '',
-        ...inst.aliases,
-        ...inst.flagship_disciplines,
-        ...inst.courses.map((c) => `${c.code} ${c.title}`),
+        ...inst.disciplines,
       ]
         .join(' ')
         .toLowerCase();
@@ -87,8 +95,19 @@ export default function DirectoryExplorer({ institutions }: Props) {
     });
 
     return [...list].sort((a, b) => {
-      if (sortBy === 'enrollment') return b.estimated_student_count - a.estimated_student_count;
-      if (sortBy === 'courses') return b.courses.length - a.courses.length;
+      if (sortBy === 'composite') {
+        return (
+          b.ranking_scores.composite - a.ranking_scores.composite ||
+          b.course_count - a.course_count ||
+          a.name.localeCompare(b.name)
+        );
+      }
+      if (sortBy === 'courses') {
+        return b.course_count - a.course_count || b.ranking_scores.composite - a.ranking_scores.composite;
+      }
+      if (sortBy === 'enrollment') {
+        return b.estimated_student_count - a.estimated_student_count;
+      }
       return a.name.localeCompare(b.name);
     });
   }, [
@@ -98,6 +117,7 @@ export default function DirectoryExplorer({ institutions }: Props) {
     tvetCategory,
     ownershipFilter,
     regionFilter,
+    onlyVerified,
     onlyElearning,
     onlyDistance,
     onlyTeaching,
@@ -105,12 +125,36 @@ export default function DirectoryExplorer({ institutions }: Props) {
     sortBy,
   ]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [
+    query,
+    typeFilter,
+    tvetCategory,
+    ownershipFilter,
+    regionFilter,
+    onlyVerified,
+    onlyElearning,
+    onlyDistance,
+    onlyTeaching,
+    onlyPortal,
+    sortBy,
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paginated = useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE;
+    return filtered.slice(start, start + PAGE_SIZE);
+  }, [filtered, safePage]);
+
   const activeFilterCount =
     (query.trim() ? 1 : 0) +
     (typeFilter !== 'all' ? 1 : 0) +
     (typeFilter === 'tvet' && tvetCategory !== 'all' ? 1 : 0) +
     (ownershipFilter !== 'all' ? 1 : 0) +
     (regionFilter !== 'all' ? 1 : 0) +
+    (onlyVerified ? 1 : 0) +
     (onlyElearning ? 1 : 0) +
     (onlyDistance ? 1 : 0) +
     (onlyTeaching ? 1 : 0) +
@@ -122,6 +166,7 @@ export default function DirectoryExplorer({ institutions }: Props) {
     setTvetCategory('all');
     setOwnershipFilter('all');
     setRegionFilter('all');
+    setOnlyVerified(false);
     setOnlyElearning(false);
     setOnlyDistance(false);
     setOnlyTeaching(false);
@@ -143,7 +188,7 @@ export default function DirectoryExplorer({ institutions }: Props) {
     () =>
       pinnedSlugs
         .map((s) => institutions.find((i) => i.slug === s))
-        .filter((i): i is PublicInstitution => Boolean(i)),
+        .filter((i): i is PublicInstitutionSummary => Boolean(i)),
     [pinnedSlugs, institutions]
   );
 
@@ -161,7 +206,7 @@ export default function DirectoryExplorer({ institutions }: Props) {
           {/* Search */}
           <div className="lg:col-span-5 relative">
             <label htmlFor="directory-search" className="sr-only">
-              Search Kenyan institutions, courses, counties, or aliases
+              Search Kenyan institutions, courses, counties, or registration codes
             </label>
             <Search className="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
@@ -169,7 +214,7 @@ export default function DirectoryExplorer({ institutions }: Props) {
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search institution, course (e.g. MBChB, Mechatronics), county, or alias..."
+              placeholder="Search institution, discipline, county, town, or TVETA/CUE code..."
               className="w-full pl-9 pr-3 py-2.5 text-sm bg-paper border border-hairline text-ink placeholder:text-muted/75 focus:outline-none focus:border-forest"
             />
           </div>
@@ -178,7 +223,7 @@ export default function DirectoryExplorer({ institutions }: Props) {
           <div className="lg:col-span-4 flex border border-hairline bg-paper">
             {(
               [
-                { key: 'all', label: 'All Institutions' },
+                { key: 'all', label: 'All Types' },
                 { key: 'university', label: 'Universities' },
                 { key: 'tvet', label: 'TVET' },
                 { key: 'kmtc', label: 'KMTC' },
@@ -216,8 +261,9 @@ export default function DirectoryExplorer({ institutions }: Props) {
               onChange={(e) => setSortBy(e.target.value as SortKey)}
               className="flex-1 px-3 py-2.5 text-xs font-medium bg-paper border border-hairline text-ink focus:outline-none focus:border-forest"
             >
-              <option value="enrollment">Sort: Est. Enrollment</option>
+              <option value="composite">Sort: Composite Score</option>
               <option value="courses">Sort: Catalogued Courses</option>
+              <option value="enrollment">Sort: Est. Enrollment</option>
               <option value="name">Sort: Alphabetical (A–Z)</option>
             </select>
 
@@ -283,8 +329,8 @@ export default function DirectoryExplorer({ institutions }: Props) {
               className="px-2.5 py-1 bg-paper border border-hairline text-ink focus:outline-none focus:border-forest"
             >
               <option value="all">Public &amp; Private</option>
-              <option value="public">Public Chartered</option>
-              <option value="private">Private Chartered</option>
+              <option value="public">Public</option>
+              <option value="private">Private</option>
             </select>
           </div>
 
@@ -310,10 +356,11 @@ export default function DirectoryExplorer({ institutions }: Props) {
           <div className="flex flex-wrap items-center gap-2 ml-auto">
             {(
               [
+                { label: 'Verified', checked: onlyVerified, toggle: () => setOnlyVerified((v) => !v) },
                 { label: 'E-Learning', checked: onlyElearning, toggle: () => setOnlyElearning((v) => !v) },
                 { label: 'ODeL / Distance', checked: onlyDistance, toggle: () => setOnlyDistance((v) => !v) },
                 { label: 'Teaching Practicum', checked: onlyTeaching, toggle: () => setOnlyTeaching((v) => !v) },
-                { label: 'Active Portal', checked: onlyPortal, toggle: () => setOnlyPortal((v) => !v) },
+                { label: 'Schologic LMS', checked: onlyPortal, toggle: () => setOnlyPortal((v) => !v) },
               ] as const
             ).map((item) => (
               <button
@@ -346,18 +393,20 @@ export default function DirectoryExplorer({ institutions }: Props) {
         </div>
       </section>
 
-      {/* Result Count & Inline Comparison Dock */}
+      {/* Result Count & Page Status */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 py-2 border-b border-hairline">
         <p className="text-xs sm:text-sm text-muted">
           Showing{' '}
           <span className="font-mono font-semibold text-ink tabular-nums">
-            {filtered.length}
+            {filtered.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1}–
+            {Math.min(safePage * PAGE_SIZE, filtered.length)}
           </span>{' '}
           of{' '}
           <span className="font-mono font-semibold text-ink tabular-nums">
-            {institutions.length}
+            {filtered.length.toLocaleString()}
           </span>{' '}
-          active indexed institutions
+          matching institutions ({institutions.length.toLocaleString()} total indexed)
+          {isLoadingFull ? ' · Syncing registry...' : ''}
         </p>
 
         {limitNotice && (
@@ -382,7 +431,7 @@ export default function DirectoryExplorer({ institutions }: Props) {
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-paper border border-hairline text-xs font-medium text-ink"
               >
                 <a href={`/institutions/${inst.slug}`} className="hover:text-forest hover:underline">
-                  {inst.aliases[0] ?? inst.name}
+                  {inst.name}
                 </a>
                 <button
                   type="button"
@@ -409,7 +458,7 @@ export default function DirectoryExplorer({ institutions }: Props) {
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-forest text-paper text-xs font-semibold hover:bg-ink transition-colors whitespace-nowrap"
             >
               <GitCompare className="w-3.5 h-3.5" />
-              Launch Radar &amp; Metric Comparison
+              Launch Radar Comparison
               <ArrowUpRight className="w-3.5 h-3.5" />
             </a>
           </div>
@@ -421,7 +470,7 @@ export default function DirectoryExplorer({ institutions }: Props) {
         <div className="border border-hairline bg-limestone/30 p-12 text-center space-y-3">
           <p className="font-serif text-xl text-ink">No indexed institutions match these filters.</p>
           <p className="text-sm text-muted max-w-md mx-auto">
-            Adjust your search term or clear active modality and regional facets to view all Kenyan
+            Adjust your search term or clear active modality and regional facets to view Kenyan
             universities, TVETs, and KMTC campuses.
           </p>
           <button
@@ -435,144 +484,140 @@ export default function DirectoryExplorer({ institutions }: Props) {
         </div>
       ) : viewMode === 'cards' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map((inst) => {
+          {paginated.map((inst) => {
             const isPinned = pinnedSlugs.includes(inst.slug);
-            const portalHost = inst.custom_portal_domain ?? inst.portal_subdomain;
-            const imgFailed = brokenImages[inst.slug];
 
             return (
               <article
                 key={inst.id}
-                className="border border-hairline bg-paper flex flex-col hover:border-ink/40 transition-colors"
+                className="border border-hairline bg-paper flex flex-col justify-between hover:border-ink/40 transition-colors p-5 space-y-4"
               >
-                {/* Cover Media Frame */}
-                <a
-                  href={`/institutions/${inst.slug}`}
-                  className="block relative aspect-[16/9] bg-limestone overflow-hidden border-b border-hairline group"
-                >
-                  {!imgFailed ? (
-                    <img
-                      src={inst.cover_image_url}
-                      alt={`${inst.name} campus`}
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                      onError={() =>
-                        setBrokenImages((prev) => ({ ...prev, [inst.slug]: true }))
-                      }
-                      className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-limestone text-muted">
-                      <span className="font-serif text-lg text-ink text-center">{inst.name}</span>
-                      <span className="font-mono text-[11px] uppercase tracking-widest mt-1">
-                        {inst.county} County
-                      </span>
-                    </div>
-                  )}
-                  <div className="absolute top-2.5 left-2.5 bg-paper/95 border border-hairline px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-ink">
-                    {formatTypeLabel(inst.type)}
-                    {inst.category ? ` · ${inst.category}` : ''}
-                  </div>
-                </a>
-
-                {/* Editorial Body */}
-                <div className="p-5 flex-1 flex flex-col">
-                  {/* Zero-pill metadata line */}
-                  <div className="font-mono text-[11px] text-muted flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-                    <span className="capitalize">{inst.ownership}</span>
-                    <span>·</span>
-                    <a
-                      href={`/counties/${inst.county.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`}
-                      className="hover:text-forest hover:underline"
-                    >
-                      {inst.county} County
+                <div>
+                  {/* Crest Logo & Header Identity */}
+                  <div className="flex items-start gap-3.5">
+                    <a href={`/institutions/${inst.slug}`} className="shrink-0">
+                      <InstitutionLogo
+                        name={inst.name}
+                        logoUrl={inst.logo_url}
+                        type={inst.type}
+                        size="lg"
+                      />
                     </a>
-                    {inst.is_verified && (
-                      <>
+                    <div className="min-w-0 flex-1">
+                      <div className="font-mono text-[10px] text-muted flex flex-wrap items-center gap-x-1.5 gap-y-0.5 uppercase tracking-wider">
+                        <span className="text-forest font-semibold">
+                          {formatTypeLabel(inst.type)}
+                          {inst.category ? ` · ${inst.category}` : ''}
+                        </span>
                         <span>·</span>
-                        <span className="text-forest font-medium">Verified</span>
-                      </>
-                    )}
+                        <span className="capitalize">{inst.ownership}</span>
+                        {inst.is_verified && (
+                          <>
+                            <span>·</span>
+                            <span className="text-forest">Verified</span>
+                          </>
+                        )}
+                      </div>
+
+                      <h3 className="font-serif text-lg font-semibold text-ink mt-1 leading-snug">
+                        <a
+                          href={`/institutions/${inst.slug}`}
+                          className="hover:text-forest transition-colors"
+                        >
+                          {inst.name}
+                        </a>
+                      </h3>
+
+                      <p className="font-mono text-[11px] text-muted mt-0.5 truncate">
+                        <a
+                          href={`/counties/${slugifyCounty(inst.county)}`}
+                          className="hover:text-forest hover:underline"
+                        >
+                          {inst.county} County
+                        </a>
+                        {' · '}
+                        {inst.town}
+                      </p>
+                    </div>
                   </div>
 
-                  <h3 className="font-serif text-xl font-semibold text-ink mt-2 leading-snug">
-                    <a
-                      href={`/institutions/${inst.slug}`}
-                      className="hover:text-forest transition-colors"
-                    >
-                      {inst.name}
-                    </a>
-                  </h3>
-
-                  <p className="mt-2 text-sm text-muted line-clamp-2 leading-relaxed">
+                  <p className="mt-3 text-sm text-muted line-clamp-2 leading-relaxed">
                     {inst.description}
                   </p>
 
-                  {/* Disciplines text line (max 3 items, zero pills) */}
-                  <p className="mt-3 text-xs text-ink/80 font-medium">
-                    {inst.flagship_disciplines.slice(0, 3).join(' · ')}
-                  </p>
+                  {inst.disciplines.length > 0 && (
+                    <p className="mt-2.5 text-xs text-ink/80 font-medium truncate">
+                      {inst.disciplines.slice(0, 3).join(' · ')}
+                    </p>
+                  )}
+                </div>
 
+                <div>
                   {/* Key Numerics */}
-                  <dl className="mt-4 pt-3 border-t border-hairline grid grid-cols-3 gap-2 text-xs">
+                  <dl className="pt-3 border-t border-hairline grid grid-cols-3 gap-2 text-xs">
                     <div>
-                      <dt className="text-muted text-[11px]">Students</dt>
-                      <dd className="font-mono font-semibold text-ink tabular-nums mt-0.5">
-                        ~{inst.estimated_student_count.toLocaleString()}
+                      <dt className="text-muted text-[11px]">Index Score</dt>
+                      <dd className="font-mono font-semibold text-forest tabular-nums mt-0.5">
+                        {inst.ranking_scores.composite} / 100
                       </dd>
                     </div>
                     <div>
                       <dt className="text-muted text-[11px]">Courses</dt>
                       <dd className="font-mono font-semibold text-ink tabular-nums mt-0.5">
-                        {inst.courses.length} tracked
+                        {inst.course_count} tracked
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-muted text-[11px]">Campuses</dt>
-                      <dd className="font-mono font-semibold text-ink tabular-nums mt-0.5">
-                        {inst.campuses.length}
+                      <dt className="text-muted text-[11px]">Schologic LMS</dt>
+                      <dd className="font-mono font-semibold text-ink truncate mt-0.5">
+                        {inst.portal_subdomain ? 'Active' : 'Available'}
                       </dd>
                     </div>
                   </dl>
 
-                  {/* Portal Status & Actions */}
+                  {/* Google Maps, Compare & Profile Actions */}
                   <div className="mt-4 pt-3 border-t border-hairline flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handlePinToggle(inst.slug)}
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold border transition-colors cursor-pointer ${
-                        isPinned
-                          ? 'bg-forest text-paper border-forest'
-                          : 'bg-limestone/60 text-ink border-hairline hover:border-ink'
-                      }`}
-                    >
-                      {isPinned ? (
-                        <Check className="w-3.5 h-3.5" />
-                      ) : (
-                        <GitCompare className="w-3.5 h-3.5" />
-                      )}
-                      {isPinned ? 'Pinned' : 'Compare'}
-                    </button>
-
-                    <div className="flex items-center gap-3">
-                      {portalHost && (
-                        <a
-                          href="/login"
-                          title={`Sign in: ${portalHost}`}
-                          className="font-mono text-[11px] text-lapis hover:underline inline-flex items-center gap-1"
-                        >
-                          Login
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      )}
-                      <a
-                        href={`/institutions/${inst.slug}`}
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-forest hover:underline whitespace-nowrap"
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => handlePinToggle(inst.slug)}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold border transition-colors cursor-pointer ${
+                          isPinned
+                            ? 'bg-forest text-paper border-forest'
+                            : 'bg-limestone/60 text-ink border-hairline hover:border-ink'
+                        }`}
                       >
-                        Monograph
-                        <ArrowUpRight className="w-3.5 h-3.5" />
+                        {isPinned ? (
+                          <Check className="w-3.5 h-3.5" />
+                        ) : (
+                          <GitCompare className="w-3.5 h-3.5" />
+                        )}
+                        {isPinned ? 'Pinned' : 'Compare'}
+                      </button>
+
+                      <a
+                        href={inst.google_maps_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={
+                          inst.has_verified_maps_url
+                            ? 'Open verified Google Maps location'
+                            : 'Find on Google Maps'
+                        }
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium border border-hairline bg-paper text-muted hover:text-ink hover:border-ink transition-colors"
+                      >
+                        Maps
+                        <ExternalLink className="w-3 h-3" />
                       </a>
                     </div>
+
+                    <a
+                      href={`/institutions/${inst.slug}`}
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-forest hover:underline whitespace-nowrap"
+                    >
+                      Full Profile
+                      <ArrowUpRight className="w-3.5 h-3.5" />
+                    </a>
                   </div>
                 </div>
               </article>
@@ -588,56 +633,72 @@ export default function DirectoryExplorer({ institutions }: Props) {
                 <th className="py-3 px-4 font-semibold">Institution</th>
                 <th className="py-3 px-3 font-semibold">Type</th>
                 <th className="py-3 px-3 font-semibold">County</th>
-                <th className="py-3 px-3 font-semibold text-right">Est. Students</th>
+                <th className="py-3 px-3 font-semibold text-right">Composite</th>
                 <th className="py-3 px-3 font-semibold text-right">Courses</th>
-                <th className="py-3 px-3 font-semibold">Portal</th>
+                <th className="py-3 px-3 font-semibold">Google Maps</th>
                 <th className="py-3 px-4 font-semibold text-right">Compare</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-hairline">
-              {filtered.map((inst) => {
+              {paginated.map((inst) => {
                 const isPinned = pinnedSlugs.includes(inst.slug);
-                const portalHost = inst.custom_portal_domain ?? inst.portal_subdomain;
                 return (
                   <tr key={inst.id} className="hover:bg-limestone/30 transition-colors">
-                    <td className="py-3.5 px-4">
-                      <a
-                        href={`/institutions/${inst.slug}`}
-                        className="font-serif font-semibold text-ink hover:text-forest hover:underline"
-                      >
-                        {inst.name}
-                      </a>
-                      <div className="font-mono text-[11px] text-muted mt-0.5">
-                        {inst.registration_number ?? 'Registry Pending'}
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-3">
+                        <InstitutionLogo
+                          name={inst.name}
+                          logoUrl={inst.logo_url}
+                          type={inst.type}
+                          size="sm"
+                        />
+                        <div className="min-w-0">
+                          <a
+                            href={`/institutions/${inst.slug}`}
+                            className="font-serif font-semibold text-ink hover:text-forest hover:underline block"
+                          >
+                            {inst.name}
+                          </a>
+                          <div className="font-mono text-[11px] text-muted mt-0.5">
+                            {inst.registration_number ?? 'Registry Listed'}
+                          </div>
+                        </div>
                       </div>
                     </td>
-                    <td className="py-3.5 px-3 whitespace-nowrap text-xs">
+                    <td className="py-3 px-3 whitespace-nowrap text-xs">
                       <span className="font-mono uppercase">
                         {formatTypeLabel(inst.type)}
                         {inst.category ? ` (${inst.category})` : ''}
                       </span>
                       <div className="text-muted capitalize">{inst.ownership}</div>
                     </td>
-                    <td className="py-3.5 px-3 whitespace-nowrap text-xs text-ink">
-                      {inst.county}
+                    <td className="py-3 px-3 whitespace-nowrap text-xs text-ink">
+                      <a
+                        href={`/counties/${slugifyCounty(inst.county)}`}
+                        className="hover:text-forest hover:underline"
+                      >
+                        {inst.county}
+                      </a>
                       <div className="text-muted">{inst.region}</div>
                     </td>
-                    <td className="py-3.5 px-3 whitespace-nowrap text-right font-mono tabular-nums text-ink">
-                      {inst.estimated_student_count.toLocaleString()}
+                    <td className="py-3 px-3 whitespace-nowrap text-right font-mono font-semibold tabular-nums text-forest">
+                      {inst.ranking_scores.composite}
                     </td>
-                    <td className="py-3.5 px-3 whitespace-nowrap text-right font-mono tabular-nums text-ink">
-                      {inst.courses.length}
+                    <td className="py-3 px-3 whitespace-nowrap text-right font-mono tabular-nums text-ink">
+                      {inst.course_count}
                     </td>
-                    <td className="py-3.5 px-3 whitespace-nowrap font-mono text-xs">
-                      {portalHost ? (
-                        <a href="/login" className="text-lapis hover:underline">
-                          {portalHost}
-                        </a>
-                      ) : (
-                        <span className="text-muted">Unclaimed</span>
-                      )}
+                    <td className="py-3 px-3 whitespace-nowrap font-mono text-xs">
+                      <a
+                        href={inst.google_maps_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-lapis hover:underline"
+                      >
+                        Map
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
                     </td>
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                    <td className="py-3 px-4 text-right whitespace-nowrap">
                       <button
                         type="button"
                         onClick={() => handlePinToggle(inst.slug)}
@@ -656,6 +717,45 @@ export default function DirectoryExplorer({ institutions }: Props) {
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Pagination Bar */}
+      {totalPages > 1 && (
+        <nav
+          aria-label="Registry pagination"
+          className="pt-4 border-t border-hairline flex flex-wrap items-center justify-between gap-3 text-xs"
+        >
+          <span className="font-mono text-muted tabular-nums">
+            Page {safePage} of {totalPages}
+          </span>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={safePage <= 1}
+              onClick={() => {
+                setPage((p) => Math.max(1, p - 1));
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="inline-flex items-center gap-1 px-3 py-1.5 border border-hairline bg-paper text-ink font-semibold disabled:opacity-40 hover:border-ink cursor-pointer"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              Previous
+            </button>
+            <button
+              type="button"
+              disabled={safePage >= totalPages}
+              onClick={() => {
+                setPage((p) => Math.min(totalPages, p + 1));
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="inline-flex items-center gap-1 px-3 py-1.5 border border-hairline bg-paper text-ink font-semibold disabled:opacity-40 hover:border-ink cursor-pointer"
+            >
+              Next
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </nav>
       )}
     </div>
   );
